@@ -179,7 +179,7 @@ def run_safe_search(driver, touch, logger, config: dict, query: str) -> dict:
 
     snapshot_file = logger.log_dir / f"session_{logger.session_id}_snapshots.jsonl"
     if Path(snapshot_file).exists():
-        summary_file = write_summary(snapshot_file)
+        summary_file = write_summary(snapshot_file, scoring_profile=config.get("candidate_scoring", {}))
         stats["summary_file"] = str(summary_file)
         logger.log("safe_search", "summary", "ok", str(summary_file))
 

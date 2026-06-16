@@ -50,12 +50,74 @@ def _post_snippets(text: str) -> list[str]:
     return snippets[:10]
 
 
-def summarize_snapshots(snapshot_path: str | Path) -> dict:
+def _default_scoring_profile() -> dict:
+    return {
+        "positive_keywords": [
+            "founder", "co-founder", "ceo", "cto", "owner", "director", "head of",
+            "startup", "entrepreneur", "ai", "saas", "technology", "software", "business",
+        ],
+        "negative_keywords": ["student", "intern", "recruiter", "hiring"],
+        "base_score": 20,
+        "mention_weight": 10,
+        "positive_keyword_weight": 8,
+        "negative_keyword_weight": -8,
+        "max_score": 100,
+    }
+
+
+def _candidate_contexts(records: list[dict], names: list[str]) -> dict[str, str]:
+    contexts: dict[str, str] = {}
+    for name in names:
+        lowered = name.lower()
+        chunks = []
+        for record in records:
+            text = record.get("text", "")
+            idx = text.lower().find(lowered)
+            if idx == -1:
+                continue
+            start = max(0, idx - 180)
+            end = min(len(text), idx + len(name) + 260)
+            chunks.append(_clean(text[start:end]))
+        contexts[name] = " | ".join(chunks)[:1000]
+    return contexts
+
+
+def _score_candidates(name_counts: Counter, records: list[dict], scoring_profile: dict | None = None) -> list[dict]:
+    profile = {**_default_scoring_profile(), **(scoring_profile or {})}
+    positive = [str(k).lower() for k in profile.get("positive_keywords", [])]
+    negative = [str(k).lower() for k in profile.get("negative_keywords", [])]
+    contexts = _candidate_contexts(records, list(name_counts.keys()))
+
+    ranked = []
+    for name, mentions in name_counts.items():
+        context = contexts.get(name, "")
+        lowered = f"{name} {context}".lower()
+        matched_positive = [keyword for keyword in positive if keyword and keyword in lowered]
+        matched_negative = [keyword for keyword in negative if keyword and keyword in lowered]
+        score = int(profile.get("base_score", 20))
+        score += int(profile.get("mention_weight", 10)) * int(mentions)
+        score += int(profile.get("positive_keyword_weight", 8)) * len(matched_positive)
+        score += int(profile.get("negative_keyword_weight", -8)) * len(matched_negative)
+        score = max(0, min(int(profile.get("max_score", 100)), score))
+        ranked.append({
+            "name": name,
+            "score": score,
+            "mentions": mentions,
+            "matched_positive_keywords": matched_positive,
+            "matched_negative_keywords": matched_negative,
+            "evidence": context[:500],
+            "recommended_next_step": "manual_review_only",
+        })
+    return sorted(ranked, key=lambda item: (item["score"], item["mentions"]), reverse=True)
+
+
+def summarize_snapshots(snapshot_path: str | Path, scoring_profile: dict | None = None) -> dict:
     path = Path(snapshot_path)
     names: list[str] = []
     hashtags: list[str] = []
     snippets: list[str] = []
     contexts: list[str] = []
+    records: list[dict] = []
     count = 0
 
     with path.open("r", encoding="utf-8") as f:
@@ -63,6 +125,7 @@ def summarize_snapshots(snapshot_path: str | Path) -> dict:
             if not line.strip():
                 continue
             record = json.loads(line)
+            records.append(record)
             count += 1
             contexts.append(record.get("context", ""))
             text = record.get("text", "")
@@ -85,14 +148,15 @@ def summarize_snapshots(snapshot_path: str | Path) -> dict:
         "snapshots": count,
         "contexts": contexts,
         "candidate_names": [{"name": name, "mentions": mentions} for name, mentions in name_counts.most_common(25)],
+        "ranked_candidates": _score_candidates(name_counts, records, scoring_profile)[:25],
         "top_hashtags": [{"hashtag": tag, "mentions": mentions} for tag, mentions in hashtag_counts.most_common(25)],
         "post_snippets": unique_snippets[:10],
     }
 
 
-def write_summary(snapshot_path: str | Path) -> Path:
+def write_summary(snapshot_path: str | Path, scoring_profile: dict | None = None) -> Path:
     path = Path(snapshot_path)
-    summary = summarize_snapshots(path)
+    summary = summarize_snapshots(path, scoring_profile=scoring_profile)
     out = path.with_name(path.stem.replace("_snapshots", "_read_only_summary") + ".json")
     with out.open("w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)

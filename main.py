@@ -307,7 +307,7 @@ def main():
         if is_read_only_live_test(config) and not args.safe_search:
             snapshot_file = logger.log_dir / f"session_{logger.session_id}_snapshots.jsonl"
             if snapshot_file.exists():
-                summary_file = write_summary(snapshot_file)
+                summary_file = write_summary(snapshot_file, scoring_profile=config.get("candidate_scoring", {}))
                 print(f"Read-only summary: {summary_file}")
         summary = logger.flush()
         print(f"Log: {logger.log_file}")

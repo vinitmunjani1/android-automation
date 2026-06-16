@@ -303,5 +303,35 @@
         "max": 1.8
       }
     }
+  },
+  "candidate_scoring": {
+    "_comment": "Read-only ranking for safe search summaries. Does not trigger any action.",
+    "positive_keywords": [
+      "founder",
+      "co-founder",
+      "ceo",
+      "cto",
+      "owner",
+      "director",
+      "head of",
+      "startup",
+      "entrepreneur",
+      "ai",
+      "saas",
+      "technology",
+      "software",
+      "business"
+    ],
+    "negative_keywords": [
+      "student",
+      "intern",
+      "recruiter",
+      "hiring"
+    ],
+    "base_score": 20,
+    "mention_weight": 10,
+    "positive_keyword_weight": 8,
+    "negative_keyword_weight": -8,
+    "max_score": 100
   }
 }

@@ -62,3 +62,5 @@ logs/session_<id>_read_only_summary.json
 ```
 
 Safe search uses configurable randomized UI pacing waits under `safe_search.waits` and gradual typing under `safe_search.typing`. These are for reliability/readability, not detection bypass.
+
+Safe search summaries now include `ranked_candidates`, a read-only shortlist scored by `candidate_scoring` keywords. The recommendation remains `manual_review_only`; the tool does not connect/message/follow candidates.
