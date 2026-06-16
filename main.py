@@ -25,7 +25,7 @@ from human_touch import HumanTouch
 from detection_shields import DetectionShield
 from session_manager import SessionManager
 from action_engine import ActionEngine, ActionPlan
-from safety import apply_safe_live_overrides, assert_no_risk_screen, is_read_only_live_test
+from safety import allow_full_automation, apply_safe_live_overrides, assert_no_risk_screen, is_read_only_live_test
 from read_only_summary import write_summary
 from safe_search import run_safe_search
 
@@ -56,6 +56,14 @@ def main():
     if args.safe_live_test or args.safe_search:
         args.once = True
         apply_safe_live_overrides(config)
+
+    if not args.dry_run and not args.safe_live_test and not args.safe_search and not allow_full_automation(config):
+        print("Refusing to run full automation: safety.allow_full_automation is false.")
+        print("Use one of the read-only commands instead:")
+        print("  python main.py --safe-live-test")
+        print("  python main.py --safe-search \"founder AI India\"")
+        print("If you intentionally accept the account risk, set safety.allow_full_automation=true in config.json.")
+        sys.exit(2)
 
     # Dry-run should not connect to ADB/uiautomator. It only previews schedule.
     if args.dry_run:

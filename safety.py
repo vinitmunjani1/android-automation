@@ -53,6 +53,10 @@ def require_manual_approval(config: dict) -> bool:
     return bool(safety_config(config).get("require_manual_approval", True))
 
 
+def allow_full_automation(config: dict) -> bool:
+    return bool(safety_config(config).get("allow_full_automation", False))
+
+
 def is_action_allowed(config: dict, action: str) -> bool:
     safety = safety_config(config)
     allow_key = f"allow_{action}"

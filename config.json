@@ -248,6 +248,7 @@
   },
   "safety": {
     "_comment": "Account-risk gates. These do not hide ADB/uiautomator or bypass platform detection; they prevent accidental account-changing actions.",
+    "allow_full_automation": false,
     "read_only_live_test": false,
     "require_manual_approval": true,
     "allow_like": false,
