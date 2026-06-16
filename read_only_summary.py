@@ -14,6 +14,15 @@ NOISE_WORDS = {
     "Menu", "Battery", "Discord", "Android", "System", "Gmail", "Airtel",
 }
 
+TITLE_WORDS = {
+    "ai", "ml", "gen", "data", "business", "analytics", "intelligence", "scientist",
+    "analyst", "engineer", "engineering", "expert", "software", "workflow", "automation",
+    "evaluation", "agentic", "harness", "rag", "forward", "deployed", "senior",
+    "talent", "acquisition", "specialist", "concept", "services", "inc", "human",
+    "resource", "manager", "career", "opportunities", "internship", "posted", "author",
+    "industry", "role", "green", "card", "like", "repost", "send",
+}
+
 
 def _clean(value: str) -> str:
     value = re.sub(r"&amp;", "&", value)
@@ -22,17 +31,42 @@ def _clean(value: str) -> str:
     return value
 
 
+def _normalize_candidate_name(value: str) -> str:
+    name = _clean(value)
+    words = [word.strip(".,|•") for word in name.split() if word.strip(".,|•")]
+    while words and words[0].lower() in TITLE_WORDS:
+        words.pop(0)
+    while words and words[-1].lower() in TITLE_WORDS:
+        words.pop()
+    if len(words) > 6:
+        # Search snippets sometimes capture a title before the name; keep the
+        # rightmost words after title-prefix stripping.
+        words = words[-6:]
+        while words and words[0].lower() in TITLE_WORDS:
+            words.pop(0)
+    if len(words) < 2:
+        return ""
+    if all(word.lower() in TITLE_WORDS for word in words):
+        return ""
+    if sum(1 for word in words if word.lower() in TITLE_WORDS) >= max(2, len(words) // 2):
+        return ""
+    return " ".join(words)
+
+
 def _candidate_names(text: str) -> list[str]:
     patterns = [
         r"View ([A-Z][A-Za-z .,'-]{2,80}) profile",
         r"Invite ([A-Z][A-Za-z .,'-]{2,80}) to connect",
         r"Suggested ([A-Z][A-Za-z .,'-]{2,80}) [•]",
+        r"(?:^|\s)([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,8})\s+•\s+(?:1st|2nd|3rd\+)",
+        r"(?:^|\s)([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,8})\s+\d+(?:m|h|d|w|mo|yr)s?\s+•",
     ]
     names: list[str] = []
     for pattern in patterns:
         for match in re.findall(pattern, text):
-            name = _clean(match)
-            if name and name not in NOISE_WORDS and len(name.split()) <= 6:
+            name = _normalize_candidate_name(match)
+            words = name.split()
+            if name and name not in NOISE_WORDS and 2 <= len(words) <= 6 and not any(word in NOISE_WORDS for word in words):
                 names.append(name)
     return names
 
@@ -147,13 +181,16 @@ def summarize_snapshots(snapshot_path: str | Path, scoring_profile: dict | None 
 
     ranked_candidates = _score_candidates(name_counts, records, scoring_profile)[:25]
     llm_status = {"enabled": False, "used": False, "error": ""}
-    if config and llm_scoring_enabled(config):
+    if config and llm_scoring_enabled(config) and ranked_candidates:
         llm_status["enabled"] = True
         try:
             ranked_candidates = score_candidates_with_openrouter(ranked_candidates, config, query=query)
             llm_status["used"] = True
         except Exception as exc:
             llm_status["error"] = str(exc)[:800]
+    elif config and llm_scoring_enabled(config):
+        llm_status["enabled"] = True
+        llm_status["error"] = "No candidates extracted; LLM scoring skipped"
 
     return {
         "snapshot_file": str(path),
