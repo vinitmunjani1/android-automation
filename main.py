@@ -27,6 +27,7 @@ from session_manager import SessionManager
 from action_engine import ActionEngine, ActionPlan
 from safety import apply_safe_live_overrides, assert_no_risk_screen, is_read_only_live_test
 from read_only_summary import write_summary
+from safe_search import run_safe_search
 
 
 def main():
@@ -34,6 +35,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Show schedule without running")
     parser.add_argument("--once", action="store_true", help="Run a single session now")
     parser.add_argument("--safe-live-test", action="store_true", help="Run one short read-only LinkedIn live test (no likes/connects/messages)")
+    parser.add_argument("--safe-search", default="", help="Run read-only LinkedIn search scan for this query")
     parser.add_argument("--device", default=None, help="ADB device serial")
     parser.add_argument("--config", default="config.json", help="Config file path")
     args = parser.parse_args()
@@ -51,7 +53,7 @@ def main():
     if args.device:
         config["device"]["serial"] = args.device
 
-    if args.safe_live_test:
+    if args.safe_live_test or args.safe_search:
         args.once = True
         apply_safe_live_overrides(config)
 
@@ -71,6 +73,8 @@ def main():
         print(f"\nTotal: {len(schedule)} sessions planned")
         if is_read_only_live_test(config):
             print("Safe live-test overrides: enabled (read-only, no account-changing actions)")
+        if args.safe_search:
+            print(f"Safe search query: {args.safe_search}")
         return
 
     # ─── Initialize ADB connection ──────────────────────────────────────────
@@ -279,15 +283,20 @@ def main():
     # ─── Run ─────────────────────────────────────────────────────────────────
     if args.once:
         # Run a single session now
-        if is_read_only_live_test(config):
+        if args.safe_search:
+            print(f"\nRunning SAFE SEARCH now (read-only) for: {args.safe_search}")
+        elif is_read_only_live_test(config):
             print("\nRunning SAFE LIVE TEST now (read-only: no likes/connects/comments/messages)...")
         else:
             print("\nRunning single session now...")
         open_app()
-        stats = run_session(random.uniform(5, 8) if is_read_only_live_test(config) else random.uniform(10, 20))
+        if args.safe_search:
+            stats = run_safe_search(d, touch, logger, config, args.safe_search)
+        else:
+            stats = run_session(random.uniform(5, 8) if is_read_only_live_test(config) else random.uniform(10, 20))
         close_app()
         print(f"\nSession complete: {json.dumps(stats, indent=2)}")
-        if is_read_only_live_test(config):
+        if is_read_only_live_test(config) and not args.safe_search:
             snapshot_file = logger.log_dir / f"session_{logger.session_id}_snapshots.jsonl"
             if snapshot_file.exists():
                 summary_file = write_summary(snapshot_file)

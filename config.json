@@ -261,5 +261,10 @@
     "allow_post_detail_open": false,
     "allow_profile_open": false,
     "stop_on_risk_screen": true
+  },
+  "safe_search": {
+    "_comment": "Read-only search scanner settings. Does not connect/message/like/follow.",
+    "result_scrolls": 8,
+    "snapshot_every_scrolls": 2
   }
 }

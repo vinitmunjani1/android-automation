@@ -36,3 +36,27 @@ Equivalent behavior:
 - `--dry-run` now only prints schedule/config preview and does not connect to the phone.
 - Safe mode does not hide emulator, ADB, uiautomator, USB debugging, Play Integrity, or LinkedIn telemetry signals.
 - First live test should use a physical phone, already logged in, with no scheduled/full-auto run enabled.
+
+## Safe search mode
+
+```bash
+python main.py --safe-search "founder AI India"
+```
+
+Safe search mode:
+
+- opens LinkedIn
+- opens search
+- enters the query
+- tries the People filter if visible
+- scrolls results read-only
+- saves snapshots and a read-only summary
+- does not like, comment, connect, follow, message, or accept requests
+
+Outputs:
+
+```text
+logs/session_<id>.jsonl
+logs/session_<id>_snapshots.jsonl
+logs/session_<id>_read_only_summary.json
+```
