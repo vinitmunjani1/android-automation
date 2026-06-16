@@ -283,7 +283,7 @@ def main():
         else:
             print("\nRunning single session now...")
         open_app()
-        stats = run_session(random.uniform(1, 2) if is_read_only_live_test(config) else random.uniform(10, 20))
+        stats = run_session(random.uniform(5, 8) if is_read_only_live_test(config) else random.uniform(10, 20))
         close_app()
         print(f"\nSession complete: {json.dumps(stats, indent=2)}")
         summary = logger.flush()

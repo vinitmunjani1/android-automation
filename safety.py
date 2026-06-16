@@ -6,6 +6,9 @@ runs when LinkedIn shows checkpoint/verification/risk screens.
 """
 from __future__ import annotations
 
+import json
+import re
+from datetime import datetime, timezone
 from typing import Iterable
 
 ACCOUNT_CHANGING_ACTIONS = {
@@ -81,6 +84,36 @@ def dump_visible_text(driver) -> str:
     return str(xml or "")
 
 
+def compact_visible_text(raw: str, *, max_chars: int = 4000) -> str:
+    """Make a UI hierarchy dump reviewable without changing device state."""
+    raw = raw or ""
+    attr_values = []
+    for attr in ("text", "content-desc", "resource-id"):
+        attr_values.extend(re.findall(rf'{attr}="([^"]+)"', raw))
+    text = " ".join(attr_values) if attr_values else re.sub(r"<[^>]+>", " ", raw)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:max_chars]
+
+
+def save_read_only_snapshot(driver, logger, *, context: str) -> None:
+    """Persist a read-only visible-screen snapshot next to the session log."""
+    raw = dump_visible_text(driver)
+    compact = compact_visible_text(raw)
+    snapshot_file = logger.log_dir / f"session_{logger.session_id}_snapshots.jsonl"
+    record = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "context": context,
+        "chars": len(compact),
+        "text": compact,
+    }
+    with open(snapshot_file, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    try:
+        logger.log("safety", "read_only_snapshot", "ok", f"context={context},chars={len(compact)}")
+    except Exception:
+        pass
+
+
 def find_risk_keywords(text: str, keywords: Iterable[str] = RISK_SCREEN_KEYWORDS) -> list[str]:
     lowered = text.lower()
     return [keyword for keyword in keywords if keyword in lowered]
@@ -138,6 +171,6 @@ def apply_safe_live_overrides(config: dict) -> None:
 
     scroll = config.setdefault("scroll", {})
     scroll.update({
-        "feed_min_swipes": min(int(scroll.get("feed_min_swipes", 3)), 3),
-        "feed_max_swipes": min(int(scroll.get("feed_max_swipes", 5)), 5),
+        "feed_min_swipes": 10,
+        "feed_max_swipes": 20,
     })

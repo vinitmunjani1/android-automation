@@ -6,7 +6,7 @@ import time
 
 from human_touch import HumanTouch
 from detection_shields import DetectionShield
-from safety import assert_no_risk_screen, block_action, is_action_allowed, is_read_only_live_test
+from safety import assert_no_risk_screen, block_action, is_action_allowed, is_read_only_live_test, save_read_only_snapshot
 
 
 class HomeFeedPage:
@@ -34,6 +34,8 @@ class HomeFeedPage:
                                      scroll_cfg.get("feed_max_swipes", 12))
 
         start_time = time.monotonic()
+        if is_read_only_live_test(self._cfg):
+            save_read_only_snapshot(self._driver, self._logger, context="feed_start")
 
         for i in range(num_swipes):
             if self._cfg.get("safety", {}).get("stop_on_risk_screen", True):
@@ -68,6 +70,9 @@ class HomeFeedPage:
             # 3. Scroll to next post
             self._touch.scroll_with_back_up(log_label="feed")
             stats["scrolls"] += 1
+
+            if is_read_only_live_test(self._cfg):
+                save_read_only_snapshot(self._driver, self._logger, context=f"feed_scroll_{stats['scrolls']}")
 
             # 4. Check stuck page
             if self._shield.record_page("feed_scroll"):
