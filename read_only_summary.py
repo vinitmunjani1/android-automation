@@ -6,6 +6,8 @@ import re
 from collections import Counter
 from pathlib import Path
 
+from llm_scoring import llm_scoring_enabled, score_candidates_with_openrouter
+
 NOISE_WORDS = {
     "Home", "My Network", "Post", "Notifications", "Jobs", "Search", "Comment",
     "Repost", "Send", "Follow", "Suggested", "Promoted", "View", "Show", "Hide",
@@ -111,7 +113,7 @@ def _score_candidates(name_counts: Counter, records: list[dict], scoring_profile
     return sorted(ranked, key=lambda item: (item["score"], item["mentions"]), reverse=True)
 
 
-def summarize_snapshots(snapshot_path: str | Path, scoring_profile: dict | None = None) -> dict:
+def summarize_snapshots(snapshot_path: str | Path, scoring_profile: dict | None = None, config: dict | None = None, query: str = "") -> dict:
     path = Path(snapshot_path)
     names: list[str] = []
     hashtags: list[str] = []
@@ -143,20 +145,31 @@ def summarize_snapshots(snapshot_path: str | Path, scoring_profile: dict | None 
             seen.add(key)
             unique_snippets.append(snippet)
 
+    ranked_candidates = _score_candidates(name_counts, records, scoring_profile)[:25]
+    llm_status = {"enabled": False, "used": False, "error": ""}
+    if config and llm_scoring_enabled(config):
+        llm_status["enabled"] = True
+        try:
+            ranked_candidates = score_candidates_with_openrouter(ranked_candidates, config, query=query)
+            llm_status["used"] = True
+        except Exception as exc:
+            llm_status["error"] = str(exc)[:800]
+
     return {
         "snapshot_file": str(path),
         "snapshots": count,
         "contexts": contexts,
         "candidate_names": [{"name": name, "mentions": mentions} for name, mentions in name_counts.most_common(25)],
-        "ranked_candidates": _score_candidates(name_counts, records, scoring_profile)[:25],
+        "ranked_candidates": ranked_candidates,
+        "llm_scoring": llm_status,
         "top_hashtags": [{"hashtag": tag, "mentions": mentions} for tag, mentions in hashtag_counts.most_common(25)],
         "post_snippets": unique_snippets[:10],
     }
 
 
-def write_summary(snapshot_path: str | Path, scoring_profile: dict | None = None) -> Path:
+def write_summary(snapshot_path: str | Path, scoring_profile: dict | None = None, config: dict | None = None, query: str = "") -> Path:
     path = Path(snapshot_path)
-    summary = summarize_snapshots(path, scoring_profile=scoring_profile)
+    summary = summarize_snapshots(path, scoring_profile=scoring_profile, config=config, query=query)
     out = path.with_name(path.stem.replace("_snapshots", "_read_only_summary") + ".json")
     with out.open("w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)

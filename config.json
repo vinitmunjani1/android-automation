@@ -333,5 +333,18 @@
     "positive_keyword_weight": 8,
     "negative_keyword_weight": -8,
     "max_score": 100
+  },
+  "llm_scoring": {
+    "_comment": "Optional OpenRouter scoring. Disabled by default; sends compact candidate evidence snippets only when enabled and API key env is set.",
+    "enabled": false,
+    "provider": "openrouter",
+    "model": "openai/gpt-oss-120b",
+    "api_key_env": "OPENROUTER_API_KEY",
+    "max_candidates": 15,
+    "timeout_seconds": 45,
+    "temperature": 0.1,
+    "icp": "Founder/operator/decision-maker relevant to the search query",
+    "site_url": "https://github.com/vinitmunjani1/android-automation",
+    "app_title": "android-automation-safe-search"
   }
 }
