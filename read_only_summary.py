@@ -58,6 +58,7 @@ def _candidate_names(text: str) -> list[str]:
         r"View ([A-Z][A-Za-z .,'-]{2,80}) profile",
         r"Invite ([A-Z][A-Za-z .,'-]{2,80}) to connect",
         r"Suggested ([A-Z][A-Za-z .,'-]{2,80}) [•]",
+        r"Follow ([A-Z][A-Za-z .,'-]{2,80}?)(?:\s+View more options|\s+\d+(?:m|h|d|w|mo|yr)s?\s+•|\s+•)",
         r"(?:^|\s)([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,8})\s+•\s+(?:1st|2nd|3rd\+)",
         r"(?:^|\s)([A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,8})\s+\d+(?:m|h|d|w|mo|yr)s?\s+•",
     ]
