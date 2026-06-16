@@ -271,6 +271,37 @@
       "_comment": "Visible typing pace for read-only safe search; reliability/readability only.",
       "char_delay_min_seconds": 0.08,
       "char_delay_max_seconds": 0.18
+    },
+    "waits": {
+      "_comment": "Randomized UI pacing waits for reliability/readability; not detection bypass.",
+      "after_selector_tap_seconds": {
+        "min": 0.6,
+        "max": 1.2
+      },
+      "after_open_search_seconds": {
+        "min": 0.8,
+        "max": 1.4
+      },
+      "after_focus_input_seconds": {
+        "min": 0.25,
+        "max": 0.7
+      },
+      "before_submit_seconds": {
+        "min": 0.4,
+        "max": 0.9
+      },
+      "after_submit_seconds": {
+        "min": 2.0,
+        "max": 3.8
+      },
+      "after_people_filter_seconds": {
+        "min": 1.2,
+        "max": 2.4
+      },
+      "after_result_scroll_seconds": {
+        "min": 0.8,
+        "max": 1.8
+      }
     }
   }
 }

@@ -60,3 +60,5 @@ logs/session_<id>.jsonl
 logs/session_<id>_snapshots.jsonl
 logs/session_<id>_read_only_summary.json
 ```
+
+Safe search uses configurable randomized UI pacing waits under `safe_search.waits` and gradual typing under `safe_search.typing`. These are for reliability/readability, not detection bypass.

@@ -35,6 +35,21 @@ def _adb_input_char(value: str) -> str:
     return ""
 
 
+def _wait(config: dict, key: str, default: tuple[float, float], logger=None) -> float:
+    """Randomized UI pacing wait. This is for reliability/readability, not evasion."""
+    waits = config.get("safe_search", {}).get("waits", {})
+    value = waits.get(key, {"min": default[0], "max": default[1]})
+    lo = float(value.get("min", default[0]))
+    hi = float(value.get("max", default[1]))
+    if hi < lo:
+        hi = lo
+    duration = random.uniform(lo, hi)
+    time.sleep(duration)
+    if logger:
+        logger.log("safe_search", "wait", "ok", f"{key}={duration:.2f}s")
+    return duration
+
+
 def _type_query_slowly(touch, logger, query: str, config: dict) -> int:
     """Type query gradually so the UI visibly receives input.
 
@@ -55,12 +70,12 @@ def _type_query_slowly(touch, logger, query: str, config: dict) -> int:
     return typed
 
 
-def _tap_selector(obj, logger, label: str) -> bool:
+def _tap_selector(obj, logger, config: dict, label: str) -> bool:
     try:
         if obj.exists:
             obj.click()
             logger.log("safe_search", label, "ok", "selector_click")
-            time.sleep(0.8)
+            _wait(config, "after_selector_tap_seconds", (0.6, 1.2), logger)
             return True
     except Exception as exc:
         logger.log("safe_search", label, "warn", f"selector_click_failed={exc}")
@@ -77,13 +92,13 @@ def _open_search(driver, touch, logger) -> None:
         driver(textContains="Search"),
     ]
     for candidate in candidates:
-        if _tap_selector(candidate, logger, "open_search"):
+        if _tap_selector(candidate, logger, touch._cfg, "open_search"):
             return
 
     # Coordinate fallback: top search bar area from captured LinkedIn home UI.
     touch.tap(int(touch.width * 0.42), touch.status_bar + 70, log_label="safe_search_open_fallback")
     logger.log("safe_search", "open_search", "ok", "coordinate_fallback")
-    time.sleep(1.0)
+    _wait(touch._cfg, "after_open_search_seconds", (0.8, 1.4), logger)
 
 
 def _enter_query(driver, touch, logger, config: dict, query: str) -> None:
@@ -92,7 +107,7 @@ def _enter_query(driver, touch, logger, config: dict, query: str) -> None:
         edit = driver(className="android.widget.EditText")
         if edit.exists:
             edit.click()
-            time.sleep(0.4)
+            _wait(config, "after_focus_input_seconds", (0.25, 0.7), logger)
     except Exception as exc:
         logger.log("safe_search", "focus_query", "warn", f"edit_focus_failed={exc}")
 
@@ -102,23 +117,23 @@ def _enter_query(driver, touch, logger, config: dict, query: str) -> None:
         touch._shell(f"input text {safe_query}")
         logger.log("safe_search", "enter_query", "ok", "adb_input_text_fallback")
 
-    time.sleep(0.5)
+    _wait(config, "before_submit_seconds", (0.4, 0.9), logger)
     try:
         driver.press("enter")
     except Exception:
         touch._shell("input keyevent 66")  # KEYCODE_ENTER
     logger.log("safe_search", "submit_query", "ok", query)
-    time.sleep(2.5)
+    _wait(config, "after_submit_seconds", (2.0, 3.8), logger)
 
 
-def _try_people_filter(driver, logger) -> None:
+def _try_people_filter(driver, logger, config: dict) -> None:
     """Tap People filter if visible. Safe/read-only."""
     for selector in (driver(text="People"), driver(textContains="People")):
         try:
             if selector.exists:
                 selector.click()
                 logger.log("safe_search", "people_filter", "ok", "selector_click")
-                time.sleep(1.5)
+                _wait(config, "after_people_filter_seconds", (1.2, 2.4), logger)
                 return
         except Exception as exc:
             logger.log("safe_search", "people_filter", "warn", f"failed={exc}")
@@ -143,7 +158,7 @@ def run_safe_search(driver, touch, logger, config: dict, query: str) -> dict:
     _enter_query(driver, touch, logger, config, query)
     assert_no_risk_screen(driver, logger, context="safe_search_results")
 
-    _try_people_filter(driver, logger)
+    _try_people_filter(driver, logger, config)
     assert_no_risk_screen(driver, logger, context="safe_search_people_filter")
 
     save_read_only_snapshot(driver, logger, context="search_results_start")
@@ -156,7 +171,7 @@ def run_safe_search(driver, touch, logger, config: dict, query: str) -> dict:
     for idx in range(1, scrolls + 1):
         touch.scroll_down(count=1, log_label="safe_search_results")
         stats["scrolls"] += 1
-        time.sleep(1.0)
+        _wait(config, "after_result_scroll_seconds", (0.8, 1.8), logger)
         assert_no_risk_screen(driver, logger, context=f"safe_search_scroll_{idx}")
         if idx == 1 or idx % snapshot_every == 0:
             save_read_only_snapshot(driver, logger, context=f"search_results_scroll_{idx}")
