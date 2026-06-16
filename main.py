@@ -38,6 +38,7 @@ def main():
     parser.add_argument("--once", action="store_true", help="Run a single session now")
     parser.add_argument("--safe-live-test", action="store_true", help="Run one short read-only LinkedIn live test (no likes/connects/messages)")
     parser.add_argument("--safe-search", default="", help="Run read-only LinkedIn search scan for this query")
+    parser.add_argument("--safe-open-profiles", type=int, default=0, help="With --safe-search, explicitly open up to N profiles read-only for better ranking")
     parser.add_argument("--test-llm-scoring", action="store_true", help="Test OpenRouter LLM scoring setup without opening LinkedIn")
     parser.add_argument("--device", default=None, help="ADB device serial")
     parser.add_argument("--config", default="config.json", help="Config file path")
@@ -313,7 +314,7 @@ def main():
             print("\nRunning single session now...")
         open_app()
         if args.safe_search:
-            stats = run_safe_search(d, touch, logger, config, args.safe_search)
+            stats = run_safe_search(d, touch, logger, config, args.safe_search, open_profiles=max(0, args.safe_open_profiles))
         else:
             stats = run_session(random.uniform(5, 8) if is_read_only_live_test(config) else random.uniform(10, 20))
         close_app()

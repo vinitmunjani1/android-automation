@@ -140,13 +140,59 @@ def _try_people_filter(driver, logger, config: dict) -> None:
     logger.log("safe_search", "people_filter", "skip", "not_visible")
 
 
-def run_safe_search(driver, touch, logger, config: dict, query: str) -> dict:
+def _open_visible_profiles_read_only(driver, touch, logger, config: dict, max_profiles: int) -> int:
+    """Open visible search-result profile/title rows read-only and snapshot them.
+
+    This can create LinkedIn profile-view signals, so it is only called when the
+    user explicitly passes --safe-open-profiles N.
+    """
+    if max_profiles <= 0:
+        return 0
+
+    opened = 0
+    selectors = [
+        {"resourceId": "com.linkedin.android:id/search_entity_result_actor_title"},
+        {"resourceId": "com.linkedin.android:id/search_entity_result_actor_first_line_container"},
+    ]
+    for selector_kwargs in selectors:
+        try:
+            collection = driver(**selector_kwargs)
+            count = getattr(collection, "count", 0)
+        except Exception as exc:
+            logger.log("safe_search", "profile_selector", "warn", f"{selector_kwargs} failed={exc}")
+            continue
+
+        for idx in range(min(count, max_profiles - opened)):
+            try:
+                item = collection[idx]
+                if not item.exists:
+                    continue
+                item.click()
+                logger.log("safe_search", "open_profile_read_only", "ok", f"selector={selector_kwargs},index={idx}")
+                _wait(config, "after_profile_open_seconds", (2.0, 3.5), logger)
+                assert_no_risk_screen(driver, logger, context=f"safe_profile_{opened + 1}")
+                save_read_only_snapshot(driver, logger, context=f"profile_read_only_{opened + 1}")
+                opened += 1
+                touch.back(log_label="safe_profile_back")
+                _wait(config, "after_profile_back_seconds", (1.0, 2.0), logger)
+                if opened >= max_profiles:
+                    return opened
+            except Exception as exc:
+                logger.log("safe_search", "open_profile_read_only", "warn", str(exc)[:500])
+                try:
+                    touch.back(log_label="safe_profile_back_after_error")
+                except Exception:
+                    pass
+    return opened
+
+
+def run_safe_search(driver, touch, logger, config: dict, query: str, open_profiles: int = 0) -> dict:
     """Run a read-only search scan and write snapshots + summary."""
     query = query.strip()
     if not query:
         raise ValueError("safe search query cannot be empty")
 
-    stats = {"query": query, "snapshots": 0, "scrolls": 0, "summary_file": ""}
+    stats = {"query": query, "snapshots": 0, "scrolls": 0, "profiles_opened_read_only": 0, "summary_file": ""}
     logger.log("safe_search", "start", "ok", query)
 
     touch.nav_to_tab("home", log_label="safe_search_home")
@@ -177,11 +223,21 @@ def run_safe_search(driver, touch, logger, config: dict, query: str) -> dict:
             save_read_only_snapshot(driver, logger, context=f"search_results_scroll_{idx}")
             stats["snapshots"] += 1
 
+        if open_profiles and stats["profiles_opened_read_only"] < open_profiles and idx in (1, 2):
+            opened_now = _open_visible_profiles_read_only(
+                driver,
+                touch,
+                logger,
+                config,
+                open_profiles - stats["profiles_opened_read_only"],
+            )
+            stats["profiles_opened_read_only"] += opened_now
+
     snapshot_file = logger.log_dir / f"session_{logger.session_id}_snapshots.jsonl"
     if Path(snapshot_file).exists():
         summary_file = write_summary(snapshot_file, scoring_profile=config.get("candidate_scoring", {}), config=config, query=query)
         stats["summary_file"] = str(summary_file)
         logger.log("safe_search", "summary", "ok", str(summary_file))
 
-    logger.log("safe_search", "complete", "ok", f"query={query},scrolls={stats['scrolls']},snapshots={stats['snapshots']}")
+    logger.log("safe_search", "complete", "ok", f"query={query},scrolls={stats['scrolls']},snapshots={stats['snapshots']},profiles_opened_read_only={stats['profiles_opened_read_only']}")
     return stats

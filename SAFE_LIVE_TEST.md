@@ -95,3 +95,13 @@ python main.py --test-llm-scoring
 ```
 
 Do not put the actual API key in `config.json`; `api_key_env` is the environment variable name, not the key value.
+
+## Optional read-only profile review
+
+Search-result snippets can be too thin for strong ranking. To explicitly open a small number of visible profiles read-only:
+
+```bash
+python main.py --safe-search "ai engineer" --safe-open-profiles 3
+```
+
+This may create LinkedIn profile-view signals/notifications. It still does not connect, follow, message, like, comment, save, or accept requests.

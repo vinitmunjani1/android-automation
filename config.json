@@ -301,6 +301,14 @@
       "after_result_scroll_seconds": {
         "min": 0.8,
         "max": 1.8
+      },
+      "after_profile_open_seconds": {
+        "min": 2.0,
+        "max": 3.5
+      },
+      "after_profile_back_seconds": {
+        "min": 1.0,
+        "max": 2.0
       }
     }
   },
