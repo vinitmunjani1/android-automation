@@ -317,7 +317,7 @@
         "max": 3.0
       }
     },
-    "profile_open_coordinate_fallback": true
+    "profile_open_coordinate_fallback": false
   },
   "candidate_scoring": {
     "_comment": "Read-only ranking for safe search summaries. Does not trigger any action.",

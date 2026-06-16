@@ -241,7 +241,7 @@ def _try_open_by_coordinates(driver, touch, logger, config: dict, max_to_open: i
 
     This is disabled unless safe_search.profile_open_coordinate_fallback is true.
     """
-    if not config.get("safe_search", {}).get("profile_open_coordinate_fallback", True):
+    if not config.get("safe_search", {}).get("profile_open_coordinate_fallback", False):
         logger.log("safe_search", "profile_coordinate_fallback", "skip", "disabled")
         return 0
     opened = 0
@@ -296,7 +296,7 @@ def _open_visible_profiles_read_only(driver, touch, logger, config: dict, max_pr
                     pass
     if opened < max_profiles:
         opened += _try_open_by_resource_ids(driver, touch, logger, config, max_profiles - opened)
-    if opened < max_profiles:
+    if opened < max_profiles and visible_names:
         opened += _try_open_by_coordinates(driver, touch, logger, config, max_profiles - opened)
     if opened < max_profiles:
         logger.log("safe_search", "profile_open_methods_exhausted", "warn", f"opened={opened},requested={max_profiles}")
