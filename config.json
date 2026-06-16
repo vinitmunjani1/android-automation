@@ -265,6 +265,11 @@
   "safe_search": {
     "_comment": "Read-only search scanner settings. Does not connect/message/like/follow.",
     "result_scrolls": 8,
-    "snapshot_every_scrolls": 2
+    "snapshot_every_scrolls": 2,
+    "typing": {
+      "_comment": "Visible typing pace for read-only safe search; reliability/readability only.",
+      "char_delay_min_seconds": 0.08,
+      "char_delay_max_seconds": 0.18
+    }
   }
 }

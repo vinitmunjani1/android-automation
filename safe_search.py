@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import re
 import time
+import random
 from pathlib import Path
 
 from safety import assert_no_risk_screen, save_read_only_snapshot
@@ -21,6 +22,37 @@ def _adb_input_text(value: str) -> str:
     # Keep search query conservative for shell input fallback.
     value = re.sub(r"[^A-Za-z0-9_%s+.#@-]", "", value)
     return value
+
+
+def _adb_input_char(value: str) -> str:
+    """Escape one character for Android `input text`."""
+    if value == " ":
+        return "%s"
+    if value == "%":
+        return "%25"
+    if re.match(r"[A-Za-z0-9_.#@+-]", value):
+        return value
+    return ""
+
+
+def _type_query_slowly(touch, logger, query: str, config: dict) -> int:
+    """Type query gradually so the UI visibly receives input.
+
+    This is a reliability/readability feature, not a detection bypass.
+    """
+    typing_cfg = config.get("safe_search", {}).get("typing", {})
+    min_delay = float(typing_cfg.get("char_delay_min_seconds", 0.08))
+    max_delay = float(typing_cfg.get("char_delay_max_seconds", 0.18))
+    typed = 0
+    for char in query:
+        escaped = _adb_input_char(char)
+        if not escaped:
+            continue
+        touch._shell(f"input text {escaped}")
+        typed += 1
+        time.sleep(random.uniform(min_delay, max_delay))
+    logger.log("safe_search", "type_query_slowly", "ok", f"chars={typed}")
+    return typed
 
 
 def _tap_selector(obj, logger, label: str) -> bool:
@@ -54,22 +86,21 @@ def _open_search(driver, touch, logger) -> None:
     time.sleep(1.0)
 
 
-def _enter_query(driver, touch, logger, query: str) -> None:
+def _enter_query(driver, touch, logger, config: dict, query: str) -> None:
     """Enter search query and submit."""
-    entered = False
     try:
         edit = driver(className="android.widget.EditText")
         if edit.exists:
-            edit.set_text(query)
-            entered = True
-            logger.log("safe_search", "enter_query", "ok", "edit_text_set_text")
+            edit.click()
+            time.sleep(0.4)
     except Exception as exc:
-        logger.log("safe_search", "enter_query", "warn", f"set_text_failed={exc}")
+        logger.log("safe_search", "focus_query", "warn", f"edit_focus_failed={exc}")
 
-    if not entered:
+    typed = _type_query_slowly(touch, logger, query, config=config)
+    if typed == 0:
         safe_query = _adb_input_text(query)
         touch._shell(f"input text {safe_query}")
-        logger.log("safe_search", "enter_query", "ok", "adb_input_text")
+        logger.log("safe_search", "enter_query", "ok", "adb_input_text_fallback")
 
     time.sleep(0.5)
     try:
@@ -109,7 +140,7 @@ def run_safe_search(driver, touch, logger, config: dict, query: str) -> dict:
     _open_search(driver, touch, logger)
     assert_no_risk_screen(driver, logger, context="safe_search_open")
 
-    _enter_query(driver, touch, logger, query)
+    _enter_query(driver, touch, logger, config, query)
     assert_no_risk_screen(driver, logger, context="safe_search_results")
 
     _try_people_filter(driver, logger)
