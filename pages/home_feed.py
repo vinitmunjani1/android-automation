@@ -68,10 +68,10 @@ class HomeFeedPage:
                 self._maybe_open_post_profile(stats)
 
             # 3. Scroll to next post
-            self._touch.scroll_with_back_up(log_label="feed")
-            stats["scrolls"] += 1
+            scroll_actions = self._touch.scroll_with_back_up(count=1, log_label="feed")
+            stats["scrolls"] += len([action for action in scroll_actions if action == "down"])
 
-            if is_read_only_live_test(self._cfg):
+            if is_read_only_live_test(self._cfg) and (stats["scrolls"] == 1 or stats["scrolls"] % 3 == 0):
                 save_read_only_snapshot(self._driver, self._logger, context=f"feed_scroll_{stats['scrolls']}")
 
             # 4. Check stuck page

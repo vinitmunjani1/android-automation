@@ -26,6 +26,7 @@ from detection_shields import DetectionShield
 from session_manager import SessionManager
 from action_engine import ActionEngine, ActionPlan
 from safety import apply_safe_live_overrides, assert_no_risk_screen, is_read_only_live_test
+from read_only_summary import write_summary
 
 
 def main():
@@ -286,6 +287,11 @@ def main():
         stats = run_session(random.uniform(5, 8) if is_read_only_live_test(config) else random.uniform(10, 20))
         close_app()
         print(f"\nSession complete: {json.dumps(stats, indent=2)}")
+        if is_read_only_live_test(config):
+            snapshot_file = logger.log_dir / f"session_{logger.session_id}_snapshots.jsonl"
+            if snapshot_file.exists():
+                summary_file = write_summary(snapshot_file)
+                print(f"Read-only summary: {summary_file}")
         summary = logger.flush()
         print(f"Log: {logger.log_file}")
         return
