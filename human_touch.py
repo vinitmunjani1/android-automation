@@ -68,6 +68,10 @@ class HumanTouch:
         obj = self._touch_cfg.get(key, {})
         return float(obj["min"]), float(obj["max"])
 
+    def _cfg_int_range(self, key: str) -> tuple[int, int]:
+        lo, hi = self._cfg_range(key)
+        return int(round(lo)), int(round(hi))
+
     def _clamp(self, x: int, y: int) -> tuple[int, int]:
         return (max(0, min(x, self.width - 1)), max(0, min(y, self.height - 1)))
 
@@ -88,14 +92,14 @@ class HumanTouch:
 
         # Add drift
         if drift:
-            dx = random.randint(-self._cfg_range("tap_drift_px")[1],
-                                self._cfg_range("tap_drift_px")[1])
-            dy = random.randint(-self._cfg_range("tap_drift_px")[1],
-                                self._cfg_range("tap_drift_px")[1])
+            _, drift_max = self._cfg_int_range("tap_drift_px")
+            dx = random.randint(-drift_max, drift_max)
+            dy = random.randint(-drift_max, drift_max)
             drift_x = x + dx
             drift_y = y + dy
         else:
             drift_x, drift_y = x, y
+            dx = dy = 0
 
         drift_x, drift_y = self._clamp(drift_x, drift_y)
         dwell_ms = int(self._r(*self._cfg_range("tap_dwell_ms")))
