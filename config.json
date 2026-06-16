@@ -310,7 +310,8 @@
         "min": 1.0,
         "max": 2.0
       }
-    }
+    },
+    "profile_open_coordinate_fallback": true
   },
   "candidate_scoring": {
     "_comment": "Read-only ranking for safe search summaries. Does not trigger any action.",

@@ -10,8 +10,8 @@ import time
 import random
 from pathlib import Path
 
-from safety import assert_no_risk_screen, save_read_only_snapshot
-from read_only_summary import write_summary
+from safety import assert_no_risk_screen, dump_visible_text, save_read_only_snapshot
+from read_only_summary import _candidate_names, write_summary
 
 
 def _adb_input_text(value: str) -> str:
@@ -140,6 +140,123 @@ def _try_people_filter(driver, logger, config: dict) -> None:
     logger.log("safe_search", "people_filter", "skip", "not_visible")
 
 
+def _click_object_center(obj, touch, logger, label: str) -> bool:
+    """Click a UI object using bounds center when direct click is unreliable."""
+    try:
+        info = obj.info if hasattr(obj, "info") else obj.get_info()
+        bounds = info.get("bounds", {}) if isinstance(info, dict) else {}
+        if not bounds:
+            return False
+        left = bounds.get("left", bounds.get("x", 0))
+        right = bounds.get("right", 0)
+        top = bounds.get("top", bounds.get("y", 0))
+        bottom = bounds.get("bottom", 0)
+        if right <= left or bottom <= top:
+            return False
+        cx = int((left + right) / 2)
+        cy = int((top + bottom) / 2)
+        touch.tap(cx, cy, log_label=label)
+        logger.log("safe_search", label, "ok", f"bounds_center=({cx},{cy})")
+        return True
+    except Exception as exc:
+        logger.log("safe_search", label, "warn", f"bounds_click_failed={exc}")
+        return False
+
+
+def _try_open_by_name(driver, touch, logger, config: dict, name: str) -> bool:
+    """Try opening a visible result by candidate name text."""
+    selectors = [driver(text=name), driver(textContains=name)]
+    for selector in selectors:
+        try:
+            if selector.exists:
+                try:
+                    selector.click()
+                    logger.log("safe_search", "open_profile_by_name", "ok", name)
+                    return True
+                except Exception:
+                    if _click_object_center(selector, touch, logger, "open_profile_by_name_center"):
+                        return True
+        except Exception as exc:
+            logger.log("safe_search", "open_profile_by_name", "warn", f"{name}: {exc}")
+    return False
+
+
+def _try_open_by_resource_ids(driver, touch, logger, config: dict, max_to_open: int) -> int:
+    """Try LinkedIn search-result resource IDs across app variants."""
+    opened = 0
+    resource_ids = [
+        "com.linkedin.android:id/search_entity_result_actor_title",
+        "com.linkedin.android:id/search_entity_result_actor_first_line_container",
+        "com.linkedin.android:id/search_entity_result_content_actor",
+        "com.linkedin.android:id/search_entity_result_content_b_actor",
+        "com.linkedin.android:id/search_entity_result_content_a_template",
+        "com.linkedin.android:id/search_entity_result_content_b_template",
+    ]
+    for resource_id in resource_ids:
+        if opened >= max_to_open:
+            break
+        try:
+            collection = driver(resourceId=resource_id)
+            count = int(getattr(collection, "count", 0) or 0)
+            logger.log("safe_search", "profile_selector_count", "ok", f"{resource_id}={count}")
+        except Exception as exc:
+            logger.log("safe_search", "profile_selector", "warn", f"{resource_id} failed={exc}")
+            continue
+
+        for idx in range(min(count, max_to_open - opened)):
+            try:
+                item = collection[idx]
+                if not item.exists:
+                    continue
+                try:
+                    item.click()
+                except Exception:
+                    if not _click_object_center(item, touch, logger, "open_profile_resource_center"):
+                        continue
+                logger.log("safe_search", "open_profile_resource", "ok", f"resource_id={resource_id},index={idx}")
+                opened += 1
+                _wait(config, "after_profile_open_seconds", (2.0, 3.5), logger)
+                assert_no_risk_screen(driver, logger, context=f"safe_profile_resource_{opened}")
+                save_read_only_snapshot(driver, logger, context=f"profile_read_only_{opened}")
+                touch.back(log_label="safe_profile_back")
+                _wait(config, "after_profile_back_seconds", (1.0, 2.0), logger)
+                if opened >= max_to_open:
+                    return opened
+            except Exception as exc:
+                logger.log("safe_search", "open_profile_resource", "warn", str(exc)[:500])
+                try:
+                    touch.back(log_label="safe_profile_back_after_error")
+                except Exception:
+                    pass
+    return opened
+
+
+def _try_open_by_coordinates(driver, touch, logger, config: dict, max_to_open: int) -> int:
+    """Last-resort read-only result-card coordinate opening.
+
+    This is disabled unless safe_search.profile_open_coordinate_fallback is true.
+    """
+    if not config.get("safe_search", {}).get("profile_open_coordinate_fallback", True):
+        logger.log("safe_search", "profile_coordinate_fallback", "skip", "disabled")
+        return 0
+    opened = 0
+    x = int(touch.width * 0.38)
+    y_values = [int(touch.height * ratio) for ratio in (0.31, 0.43, 0.55, 0.67)]
+    for y in y_values[:max_to_open]:
+        touch.tap(x, y, log_label="open_profile_coordinate_fallback")
+        logger.log("safe_search", "open_profile_coordinate", "ok", f"x={x},y={y}")
+        opened += 1
+        _wait(config, "after_profile_open_seconds", (2.0, 3.5), logger)
+        try:
+            assert_no_risk_screen(driver, logger, context=f"safe_profile_coordinate_{opened}")
+            save_read_only_snapshot(driver, logger, context=f"profile_read_only_coordinate_{opened}")
+        except Exception as exc:
+            logger.log("safe_search", "profile_coordinate_snapshot", "warn", str(exc)[:500])
+        touch.back(log_label="safe_profile_back")
+        _wait(config, "after_profile_back_seconds", (1.0, 2.0), logger)
+    return opened
+
+
 def _open_visible_profiles_read_only(driver, touch, logger, config: dict, max_profiles: int) -> int:
     """Open visible search-result profile/title rows read-only and snapshot them.
 
@@ -150,25 +267,14 @@ def _open_visible_profiles_read_only(driver, touch, logger, config: dict, max_pr
         return 0
 
     opened = 0
-    selectors = [
-        {"resourceId": "com.linkedin.android:id/search_entity_result_actor_title"},
-        {"resourceId": "com.linkedin.android:id/search_entity_result_actor_first_line_container"},
-    ]
-    for selector_kwargs in selectors:
-        try:
-            collection = driver(**selector_kwargs)
-            count = getattr(collection, "count", 0)
-        except Exception as exc:
-            logger.log("safe_search", "profile_selector", "warn", f"{selector_kwargs} failed={exc}")
-            continue
+    visible_names = _candidate_names(dump_visible_text(driver))
+    logger.log("safe_search", "visible_profile_names", "ok", ", ".join(visible_names[:8]) or "none")
 
-        for idx in range(min(count, max_profiles - opened)):
+    for name in visible_names:
+        if opened >= max_profiles:
+            return opened
+        if _try_open_by_name(driver, touch, logger, config, name):
             try:
-                item = collection[idx]
-                if not item.exists:
-                    continue
-                item.click()
-                logger.log("safe_search", "open_profile_read_only", "ok", f"selector={selector_kwargs},index={idx}")
                 _wait(config, "after_profile_open_seconds", (2.0, 3.5), logger)
                 assert_no_risk_screen(driver, logger, context=f"safe_profile_{opened + 1}")
                 save_read_only_snapshot(driver, logger, context=f"profile_read_only_{opened + 1}")
@@ -183,6 +289,12 @@ def _open_visible_profiles_read_only(driver, touch, logger, config: dict, max_pr
                     touch.back(log_label="safe_profile_back_after_error")
                 except Exception:
                     pass
+    if opened < max_profiles:
+        opened += _try_open_by_resource_ids(driver, touch, logger, config, max_profiles - opened)
+    if opened < max_profiles:
+        opened += _try_open_by_coordinates(driver, touch, logger, config, max_profiles - opened)
+    if opened < max_profiles:
+        logger.log("safe_search", "profile_open_methods_exhausted", "warn", f"opened={opened},requested={max_profiles}")
     return opened
 
 
