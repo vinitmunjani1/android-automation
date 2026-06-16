@@ -38,6 +38,7 @@ def llm_scoring_diagnostics(config: dict) -> dict:
         "api_key_env": env_name,
         "api_key_present": bool(os.environ.get(env_name, "").strip()),
         "max_candidates": int(llm_cfg.get("max_candidates", 15)),
+        "max_tokens": int(llm_cfg.get("max_tokens", 512)),
     }
 
 
@@ -105,11 +106,13 @@ def score_candidates_with_openrouter(candidates: list[dict], config: dict, query
     model = llm_cfg.get("model", DEFAULT_MODEL)
     timeout = float(llm_cfg.get("timeout_seconds", 45))
     temperature = float(llm_cfg.get("temperature", 0.1))
+    max_tokens = int(llm_cfg.get("max_tokens", 512))
 
     user_prompt = _build_prompt(candidates, config, query=query)
     body = {
         "model": model,
         "temperature": temperature,
+        "max_tokens": max_tokens,
         "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -172,8 +175,9 @@ def test_openrouter_scoring(config: dict) -> dict:
         "matched_negative_keywords": [],
         "evidence": "Founder and CEO building AI workflow automation for B2B teams.",
     }]
-    scored = score_candidates_with_openrouter(test_candidates, config, query="AI workflow founder")
+    test_config = {**config, "llm_scoring": {**config.get("llm_scoring", {}), "max_candidates": 1, "max_tokens": int(config.get("llm_scoring", {}).get("test_max_tokens", 220))}}
+    scored = score_candidates_with_openrouter(test_candidates, test_config, query="AI workflow founder")
     return {
-        "diagnostics": llm_scoring_diagnostics(config),
+        "diagnostics": llm_scoring_diagnostics(test_config),
         "result": scored[0] if scored else None,
     }
