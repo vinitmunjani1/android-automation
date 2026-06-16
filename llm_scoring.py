@@ -13,7 +13,7 @@ from typing import Any
 
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "openai/gpt-oss-120b"
+DEFAULT_MODEL = "openai/gpt-oss-120b:free"
 
 
 SYSTEM_PROMPT = """You score LinkedIn search candidates for manual review.

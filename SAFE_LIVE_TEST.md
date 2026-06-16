@@ -79,7 +79,7 @@ Then set in `config.json`:
 "llm_scoring": {
   "enabled": true,
   "provider": "openrouter",
-  "model": "openai/gpt-oss-120b",
+  "model": "openai/gpt-oss-120b:free",
   "api_key_env": "OPENROUTER_API_KEY"
 }
 ```
