@@ -65,7 +65,18 @@ class HumanTouch:
         return center + normalized * half_range
 
     def _cfg_range(self, key: str) -> tuple[float, float]:
-        obj = self._touch_cfg.get(key, {})
+        defaults = {
+            "tap_drift_px": {"min": 1, "max": 4},
+            "tap_dwell_ms": {"min": 30, "max": 90},
+            "accidental_correction_delay_ms": {"min": 200, "max": 600},
+            "swipe_duration_ms": {"min": 200, "max": 600},
+            "scroll_micro_swipe_ms": {"min": 250, "max": 480},
+            "burst_segment_ms": {"min": 40, "max": 180},
+            "bottom_nav_offset_px": {"min": -8, "max": 8},
+        }
+        obj = self._touch_cfg.get(key) or self._cfg.get("scroll", {}).get(key) or defaults.get(key)
+        if not isinstance(obj, dict) or "min" not in obj or "max" not in obj:
+            raise KeyError(f"Missing range config for {key}; expected {{'min': ..., 'max': ...}}")
         return float(obj["min"]), float(obj["max"])
 
     def _cfg_int_range(self, key: str) -> tuple[int, int]:
@@ -237,8 +248,6 @@ class HumanTouch:
 
         rx1, ry1, rx2, ry2 = region
         actions: list[str] = []
-        scroll_cfg_local = self._touch_cfg
-
         for i in range(count):
             # Random start position within scroll region
             sx = random.randint(rx1, rx2)
