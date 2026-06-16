@@ -6,6 +6,7 @@ import time
 
 from human_touch import HumanTouch
 from detection_shields import DetectionShield
+from safety import assert_no_risk_screen, block_action, is_action_allowed, is_read_only_live_test
 
 
 class HomeFeedPage:
@@ -20,7 +21,7 @@ class HomeFeedPage:
         self._logger = logger
 
     def browse_feed(self, *, max_duration_seconds: float | None = None) -> dict:
-        """Browse the feed with human-like scrolling, reading, liking, and profile visits.
+        """Browse the feed with scrolling/reading plus optional interactions.
 
         Returns stats: {scrolls, likes, saves, comments, profiles_opened, post_details}
         """
@@ -35,6 +36,9 @@ class HomeFeedPage:
         start_time = time.monotonic()
 
         for i in range(num_swipes):
+            if self._cfg.get("safety", {}).get("stop_on_risk_screen", True):
+                assert_no_risk_screen(self._driver, self._logger, context="feed")
+
             # Time check
             if max_duration_seconds and (time.monotonic() - start_time) > max_duration_seconds:
                 break
@@ -53,12 +57,13 @@ class HomeFeedPage:
             time.sleep(dwell)
             self._logger.log("feed", "dwell", "ok", f"type={content_type},dwell={dwell:.2f}s")
 
-            # 2. Decide on post interaction
-            self._maybe_like_post(content_type, stats)
-            self._maybe_save_post(stats)
-            self._maybe_comment_post(stats)
-            self._maybe_view_post_detail(stats)
-            self._maybe_open_post_profile(stats)
+            # 2. Decide on post interaction. Safe live-test is read-only.
+            if not is_read_only_live_test(self._cfg):
+                self._maybe_like_post(content_type, stats)
+                self._maybe_save_post(stats)
+                self._maybe_comment_post(stats)
+                self._maybe_view_post_detail(stats)
+                self._maybe_open_post_profile(stats)
 
             # 3. Scroll to next post
             self._touch.scroll_with_back_up(log_label="feed")
@@ -104,6 +109,9 @@ class HomeFeedPage:
 
     def _maybe_like_post(self, content_type: str, stats: dict) -> None:
         """Like a post with human-like gesture (double-tap or button tap)."""
+        if not is_action_allowed(self._cfg, "like"):
+            block_action(self._logger, "feed", "like")
+            return
         allowed, reason = self._shield.can_act("like")
         if not allowed:
             return
@@ -155,6 +163,9 @@ class HomeFeedPage:
 
     def _maybe_save_post(self, stats: dict) -> None:
         """Save/bookmark a post."""
+        if not is_action_allowed(self._cfg, "save"):
+            block_action(self._logger, "feed", "save")
+            return
         allowed, _ = self._shield.can_act("save")
         if not allowed:
             return
@@ -176,6 +187,9 @@ class HomeFeedPage:
 
     def _maybe_comment_post(self, stats: dict) -> None:
         """Comment on a post (low probability, high engagement signal)."""
+        if not is_action_allowed(self._cfg, "comment"):
+            block_action(self._logger, "feed", "comment")
+            return
         allowed, _ = self._shield.can_act("comment")
         if not allowed:
             return
@@ -192,6 +206,9 @@ class HomeFeedPage:
 
     def _maybe_view_post_detail(self, stats: dict) -> None:
         """Expand post to see full text and comments."""
+        if not is_action_allowed(self._cfg, "post_detail_open"):
+            block_action(self._logger, "feed", "post_detail_open")
+            return
         if random.random() > 0.10:
             return
 
@@ -210,6 +227,9 @@ class HomeFeedPage:
 
     def _maybe_open_post_profile(self, stats: dict) -> None:
         """Open the post author's profile from the feed."""
+        if not is_action_allowed(self._cfg, "profile_open"):
+            block_action(self._logger, "feed", "profile_open")
+            return
         allowed, _ = self._shield.can_act("profile")
         prob = self._cfg.get("actions", {}).get("profile_open_from_feed_probability", 0.18)
         if random.random() > prob:

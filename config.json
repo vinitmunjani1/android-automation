@@ -1,9 +1,7 @@
 {
-  "_comment": "LinkedIn Human-Like Automation Config — all parameters drive human behavior simulation",
-
+  "_comment": "LinkedIn Human-Like Automation Config \u2014 all parameters drive human behavior simulation",
   "app_package": "com.linkedin.android",
   "activity": "com.linkedin.android.home.HomeActivity",
-
   "device": {
     "serial": null,
     "screen_width": 1080,
@@ -15,9 +13,11 @@
     "two_hand_zone_above": 350,
     "two_hand_zone_below": 1850
   },
-
   "session": {
-    "active_window": {"start": "09:00", "end": "21:00"},
+    "active_window": {
+      "start": "09:00",
+      "end": "21:00"
+    },
     "weekday": {
       "min_sessions_per_day": 3,
       "max_sessions_per_day": 5,
@@ -35,7 +35,6 @@
       "gap_max_minutes": 20
     }
   },
-
   "actions": {
     "min_per_session": 8,
     "max_per_session": 18,
@@ -43,11 +42,11 @@
     "like_probability": 0.35,
     "comment_probability": 0.05,
     "save_probability": 0.08,
-    "connect_probability": 0.50,
+    "connect_probability": 0.5,
     "profile_open_from_feed_probability": 0.18,
     "profile_open_from_network_probability": 0.25,
-    "notification_tap_probability": 0.30,
-    "message_tap_probability": 0.40,
+    "notification_tap_probability": 0.3,
+    "message_tap_probability": 0.4,
     "search_probability": 0.08,
     "max_likes_per_session": 3,
     "max_likes_per_minute": 2,
@@ -56,78 +55,138 @@
     "max_comments_per_session": 2,
     "max_saves_per_session": 2
   },
-
   "touch": {
-    "tap_drift_px": {"min": 1, "max": 4},
-    "tap_dwell_ms": {"min": 30, "max": 90},
+    "tap_drift_px": {
+      "min": 1,
+      "max": 4
+    },
+    "tap_dwell_ms": {
+      "min": 30,
+      "max": 90
+    },
     "double_tap_probability": 0.03,
     "accidental_touch_probability": 0.04,
-    "accidental_correction_delay_ms": {"min": 200, "max": 600},
-    "swipe_duration_ms": {"min": 200, "max": 600},
+    "accidental_correction_delay_ms": {
+      "min": 200,
+      "max": 600
+    },
+    "swipe_duration_ms": {
+      "min": 200,
+      "max": 600
+    },
     "swipe_curve": "bezier",
-    "scroll_micro_swipe_ms": {"min": 250, "max": 480},
+    "scroll_micro_swipe_ms": {
+      "min": 250,
+      "max": 480
+    },
     "scroll_back_up_probability": 0.12,
     "back_gesture_probability": 0.45,
-    "bottom_nav_offset_px": {"min": -8, "max": 8},
+    "bottom_nav_offset_px": {
+      "min": -8,
+      "max": 8
+    },
     "edge_swipe_from_x_max": 80
   },
-
   "dwell": {
-    "feed_post_text_only_seconds": {"min": 0.4, "max": 1.0},
-    "feed_post_image_seconds": {"min": 1.2, "max": 3.0},
-    "feed_post_video_seconds": {"min": 3.0, "max": 8.0},
-    "feed_post_carousel_seconds": {"min": 2.0, "max": 5.0},
-    "feed_post_article_seconds": {"min": 1.5, "max": 4.0},
-    "feed_post_with_comments_seconds": {"min": 1.0, "max": 2.5},
-    "profile_seconds": {"min": 5, "max": 15},
-    "notification_scan_seconds": {"min": 0.6, "max": 1.4},
-    "message_read_seconds": {"min": 3, "max": 8},
-    "network_scan_seconds": {"min": 1.0, "max": 2.5},
-    "post_detail_read_seconds": {"min": 4, "max": 12}
+    "feed_post_text_only_seconds": {
+      "min": 0.4,
+      "max": 1.0
+    },
+    "feed_post_image_seconds": {
+      "min": 1.2,
+      "max": 3.0
+    },
+    "feed_post_video_seconds": {
+      "min": 3.0,
+      "max": 8.0
+    },
+    "feed_post_carousel_seconds": {
+      "min": 2.0,
+      "max": 5.0
+    },
+    "feed_post_article_seconds": {
+      "min": 1.5,
+      "max": 4.0
+    },
+    "feed_post_with_comments_seconds": {
+      "min": 1.0,
+      "max": 2.5
+    },
+    "profile_seconds": {
+      "min": 5,
+      "max": 15
+    },
+    "notification_scan_seconds": {
+      "min": 0.6,
+      "max": 1.4
+    },
+    "message_read_seconds": {
+      "min": 3,
+      "max": 8
+    },
+    "network_scan_seconds": {
+      "min": 1.0,
+      "max": 2.5
+    },
+    "post_detail_read_seconds": {
+      "min": 4,
+      "max": 12
+    }
   },
-
   "scroll": {
     "feed_min_swipes": 5,
     "feed_max_swipes": 12,
-    "burst_scroll_probability": 0.30,
+    "burst_scroll_probability": 0.3,
     "mid_scroll_reverse_probability": 0.15,
-    "burst_segment_ms": {"min": 40, "max": 180},
-    "burst_travel_ratio": {"min": 0.15, "max": 0.45},
+    "burst_segment_ms": {
+      "min": 40,
+      "max": 180
+    },
+    "burst_travel_ratio": {
+      "min": 0.15,
+      "max": 0.45
+    },
     "profile_min_swipes": 2,
     "profile_max_swipes": 5,
     "network_min_swipes": 3,
     "network_max_swipes": 6
   },
-
   "scoring": {
     "auto_connect_min_score": 70,
     "score_factors": {
-      "mutual_connections_weight": 0.30,
-      "same_industry_weight": 0.20,
-      "similar_role_weight": 0.20,
+      "mutual_connections_weight": 0.3,
+      "same_industry_weight": 0.2,
+      "similar_role_weight": 0.2,
       "profile_completeness_weight": 0.15,
       "activity_recency_weight": 0.15
     }
   },
-
   "profile_defaults": {
     "my_name": "Vinit",
     "my_headline": "Founder",
     "my_industry": "Technology",
-    "my_roles": ["Founder", "CEO", "Co-Founder", "CTO"]
+    "my_roles": [
+      "Founder",
+      "CEO",
+      "Co-Founder",
+      "CTO"
+    ]
   },
-
   "anti_detection": {
     "disable_accessibility_services": true,
     "toggle_adb_between_sessions": false,
     "behavioral_daily_variation_pct": 0.15,
     "max_actions_per_minute": 8,
     "stuck_page_threshold": 3,
-    "stuck_recovery_actions": ["go_home", "scroll_feed", "nav_random", "idle"],
+    "stuck_recovery_actions": [
+      "go_home",
+      "scroll_feed",
+      "nav_random",
+      "idle"
+    ],
     "session_fingerprint_rotation": true,
     "vary_first_action_probability": 1.0
   },
-
   "recovery": {
     "session_expiry_detection": true,
     "session_expiry_keyword": "sign in",
@@ -136,20 +195,71 @@
     "app_crash_recovery": true,
     "update_screen_detection": true
   },
-
   "navigation_tabs": {
-    "home": {"tab_id": "tab_feed", "nav_index": 0, "label": "Home"},
-    "messaging": {"tab_id": "tab_messaging", "nav_index": 1, "label": "Messaging"},
-    "networking": {"tab_id": "tab_networking", "nav_index": 2, "label": "My Network"},
-    "jobs": {"tab_id": "tab_jobs", "nav_index": 3, "label": "Jobs"},
-    "notifications": {"tab_id": "tab_notifications", "nav_index": 4, "label": "Notifications"}
+    "home": {
+      "tab_id": "tab_feed",
+      "nav_index": 0,
+      "label": "Home"
+    },
+    "messaging": {
+      "tab_id": "tab_messaging",
+      "nav_index": 1,
+      "label": "Messaging"
+    },
+    "networking": {
+      "tab_id": "tab_networking",
+      "nav_index": 2,
+      "label": "My Network"
+    },
+    "jobs": {
+      "tab_id": "tab_jobs",
+      "nav_index": 3,
+      "label": "Jobs"
+    },
+    "notifications": {
+      "tab_id": "tab_notifications",
+      "nav_index": 4,
+      "label": "Notifications"
+    }
   },
-
   "content_types": {
-    "image_indicators": ["ImageView", "Image"],
-    "video_indicators": ["Video", "PlayButton", "play"],
-    "carousel_indicators": ["ViewPager", "Carousel", "swipe dots"],
-    "document_indicators": ["Document", "PDF", "Article"],
-    "text_only_indicators": ["TextView"]
+    "image_indicators": [
+      "ImageView",
+      "Image"
+    ],
+    "video_indicators": [
+      "Video",
+      "PlayButton",
+      "play"
+    ],
+    "carousel_indicators": [
+      "ViewPager",
+      "Carousel",
+      "swipe dots"
+    ],
+    "document_indicators": [
+      "Document",
+      "PDF",
+      "Article"
+    ],
+    "text_only_indicators": [
+      "TextView"
+    ]
+  },
+  "safety": {
+    "_comment": "Account-risk gates. These do not hide ADB/uiautomator or bypass platform detection; they prevent accidental account-changing actions.",
+    "read_only_live_test": false,
+    "require_manual_approval": true,
+    "allow_like": false,
+    "allow_comment": false,
+    "allow_save": false,
+    "allow_connect": false,
+    "allow_follow": false,
+    "allow_pending_accept": false,
+    "allow_message_open": false,
+    "allow_notification_tap": false,
+    "allow_post_detail_open": false,
+    "allow_profile_open": false,
+    "stop_on_risk_screen": true
   }
 }

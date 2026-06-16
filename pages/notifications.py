@@ -6,6 +6,7 @@ import time
 
 from human_touch import HumanTouch
 from detection_shields import DetectionShield
+from safety import assert_no_risk_screen, block_action, is_action_allowed, is_read_only_live_test
 
 
 class NotificationsPage:
@@ -25,6 +26,8 @@ class NotificationsPage:
         Returns: {scanned, tapped, notification_type}
         """
         stats = {"scanned": True, "tapped": False, "notification_type": ""}
+        if self._cfg.get("safety", {}).get("stop_on_risk_screen", True):
+            assert_no_risk_screen(self._driver, self._logger, context="notifications")
 
         dwell_cfg = self._cfg.get("dwell", {})
         actions_cfg = self._cfg.get("actions", {})
@@ -42,7 +45,7 @@ class NotificationsPage:
         self._touch.scroll_down(2, log_label="notif_scan_scroll")
 
         # Maybe tap a notification
-        if random.random() < actions_cfg.get("notification_tap_probability", 0.30):
+        if not is_read_only_live_test(self._cfg) and random.random() < actions_cfg.get("notification_tap_probability", 0.30):
             self._tap_random_notification(stats)
 
         self._logger.log("notifications", "check", "ok",
@@ -51,6 +54,9 @@ class NotificationsPage:
 
     def _tap_random_notification(self, stats: dict) -> None:
         """Tap a random notification to view the related content."""
+        if not is_action_allowed(self._cfg, "notification_tap"):
+            block_action(self._logger, "notifications", "notification_tap")
+            return
         try:
             # Get list of notification items
             notifications = self._driver(resourceId="com.linkedin.android:id/content_notification_list")

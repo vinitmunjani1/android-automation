@@ -25,12 +25,14 @@ from human_touch import HumanTouch
 from detection_shields import DetectionShield
 from session_manager import SessionManager
 from action_engine import ActionEngine, ActionPlan
+from safety import apply_safe_live_overrides, assert_no_risk_screen, is_read_only_live_test
 
 
 def main():
     parser = argparse.ArgumentParser(description="LinkedIn Human-Like Automation")
     parser.add_argument("--dry-run", action="store_true", help="Show schedule without running")
     parser.add_argument("--once", action="store_true", help="Run a single session now")
+    parser.add_argument("--safe-live-test", action="store_true", help="Run one short read-only LinkedIn live test (no likes/connects/messages)")
     parser.add_argument("--device", default=None, help="ADB device serial")
     parser.add_argument("--config", default="config.json", help="Config file path")
     args = parser.parse_args()
@@ -47,6 +49,28 @@ def main():
     # Override device serial if provided
     if args.device:
         config["device"]["serial"] = args.device
+
+    if args.safe_live_test:
+        args.once = True
+        apply_safe_live_overrides(config)
+
+    # Dry-run should not connect to ADB/uiautomator. It only previews schedule.
+    if args.dry_run:
+        logger = ActionLogger(log_dir="logs")
+        session_mgr = SessionManager(config, logger, lambda: None, lambda: None)
+        schedule = session_mgr.plan_day_schedule()
+        print(f"\n{'='*60}")
+        print(f"LinkedIn Automation — Schedule for {datetime.now().strftime('%A, %B %d')}")
+        print(f"{'='*60}")
+        for s in schedule:
+            start_str = s["start"].strftime("%H:%M")
+            end_str = s["end"].strftime("%H:%M")
+            print(f"  Session #{s['index']}: {start_str} — {end_str} "
+                  f"({s['duration_min']:.0f}min)")
+        print(f"\nTotal: {len(schedule)} sessions planned")
+        if is_read_only_live_test(config):
+            print("Safe live-test overrides: enabled (read-only, no account-changing actions)")
+        return
 
     # ─── Initialize ADB connection ──────────────────────────────────────────
     try:
@@ -118,6 +142,9 @@ def main():
             if update_btn.exists:
                 logger.log("app", "update_screen", "warn", "app update needed")
 
+        if config.get("safety", {}).get("stop_on_risk_screen", True):
+            assert_no_risk_screen(d, logger, context="open_app")
+
         logger.log("app", "open", "ok")
 
     def close_app():
@@ -130,7 +157,8 @@ def main():
         logger.log("app", "close", "ok", f"gap={gap:.1f}min")
 
         # Toggle ADB between sessions (optional stealth)
-        shield.toggle_adb()
+        if not is_read_only_live_test(config):
+            shield.toggle_adb()
 
     # ─── Session runner ─────────────────────────────────────────────────────
     def run_session(duration_minutes: float) -> dict:
@@ -145,7 +173,7 @@ def main():
         }
 
         # Generate action plan
-        plan = action_engine.generate_session_plan()
+        plan = [ActionPlan(page="feed", action="scroll")] if is_read_only_live_test(config) else action_engine.generate_session_plan()
         logger.log("session", "plan", "ok", f"actions={len(plan)}")
 
         # Check accessibility services
@@ -164,6 +192,9 @@ def main():
 
             page = action.page
             action_name = action.action
+
+            if config.get("safety", {}).get("stop_on_risk_screen", True):
+                assert_no_risk_screen(d, logger, context=f"before_{page}_{action_name}")
 
             # Wait if rate-limited
             wait = shield.wait_if_needed(action_name.replace("_post", "").replace("_", ""))
@@ -245,24 +276,14 @@ def main():
     session_mgr = SessionManager(config, logger, open_app, close_app)
 
     # ─── Run ─────────────────────────────────────────────────────────────────
-    if args.dry_run:
-        schedule = session_mgr.plan_day_schedule()
-        print(f"\n{'='*60}")
-        print(f"LinkedIn Automation — Schedule for {datetime.now().strftime('%A, %B %d')}")
-        print(f"{'='*60}")
-        for s in schedule:
-            start_str = s["start"].strftime("%H:%M")
-            end_str = s["end"].strftime("%H:%M")
-            print(f"  Session #{s['index']}: {start_str} — {end_str} "
-                  f"({s['duration_min']:.0f}min)")
-        print(f"\nTotal: {len(schedule)} sessions planned")
-        return
-
     if args.once:
         # Run a single session now
-        print("\nRunning single session now...")
+        if is_read_only_live_test(config):
+            print("\nRunning SAFE LIVE TEST now (read-only: no likes/connects/comments/messages)...")
+        else:
+            print("\nRunning single session now...")
         open_app()
-        stats = run_session(random.uniform(10, 20))
+        stats = run_session(random.uniform(1, 2) if is_read_only_live_test(config) else random.uniform(10, 20))
         close_app()
         print(f"\nSession complete: {json.dumps(stats, indent=2)}")
         summary = logger.flush()

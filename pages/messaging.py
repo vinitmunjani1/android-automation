@@ -6,6 +6,7 @@ import time
 
 from human_touch import HumanTouch
 from detection_shields import DetectionShield
+from safety import assert_no_risk_screen, block_action, is_action_allowed, is_read_only_live_test
 
 
 class MessagingPage:
@@ -26,6 +27,8 @@ class MessagingPage:
         """
         stats = {"has_conversations": False, "scrolled": 0, "opened_conversation": False,
                  "read_duration": 0.0}
+        if self._cfg.get("safety", {}).get("stop_on_risk_screen", True):
+            assert_no_risk_screen(self._driver, self._logger, context="messaging")
 
         dwell_cfg = self._cfg.get("dwell", {})
         actions_cfg = self._cfg.get("actions", {})
@@ -44,7 +47,7 @@ class MessagingPage:
             stats["scrolled"] = scroll_count
 
             # Maybe open a conversation
-            if random.random() < actions_cfg.get("message_tap_probability", 0.40):
+            if not is_read_only_live_test(self._cfg) and random.random() < actions_cfg.get("message_tap_probability", 0.40):
                 self._open_random_conversation(stats)
         else:
             # No conversations — quick glance and leave
@@ -86,6 +89,9 @@ class MessagingPage:
 
     def _open_random_conversation(self, stats: dict) -> None:
         """Open and read a random conversation."""
+        if not is_action_allowed(self._cfg, "message_open"):
+            block_action(self._logger, "messaging", "message_open")
+            return
         # Tap a random conversation in the list
         conv_items = self._driver(className="android.widget.RelativeLayout")
         if conv_items.count < 2:

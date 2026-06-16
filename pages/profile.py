@@ -6,6 +6,7 @@ import time
 
 from human_touch import HumanTouch
 from detection_shields import DetectionShield
+from safety import assert_no_risk_screen, block_action, is_action_allowed, is_read_only_live_test
 
 
 class ProfilePage:
@@ -25,6 +26,8 @@ class ProfilePage:
         Returns: {scrolled, connected, score, viewed_activity}
         """
         stats = {"scrolled": 0, "connected": False, "score": 0, "viewed_activity": False}
+        if self._cfg.get("safety", {}).get("stop_on_risk_screen", True):
+            assert_no_risk_screen(self._driver, self._logger, context="profile")
         dwell_cfg = self._cfg.get("dwell", {})
         scroll_cfg = self._cfg.get("scroll", {})
 
@@ -64,7 +67,7 @@ class ProfilePage:
         elapsed = time.monotonic()  # Track if we need more viewing time
 
         # 5. Maybe view activity section
-        if random.random() < 0.20 and score > 50:
+        if not is_read_only_live_test(self._cfg) and random.random() < 0.20 and score > 50:
             self._view_activity()
             stats["viewed_activity"] = True
 
@@ -139,6 +142,8 @@ class ProfilePage:
 
     def _should_connect(self, score: int) -> bool:
         """Decide whether to send a connect request based on score."""
+        if not is_action_allowed(self._cfg, "connect"):
+            return False
         min_score = self._cfg.get("scoring", {}).get("auto_connect_min_score", 70)
         prob = self._cfg.get("actions", {}).get("connect_probability", 0.50)
 
@@ -152,6 +157,9 @@ class ProfilePage:
 
     def _tap_connect(self) -> None:
         """Tap the connect/follow button on a profile."""
+        if not is_action_allowed(self._cfg, "connect"):
+            block_action(self._logger, "profile", "connect")
+            return
         allowed, reason = self._shield.can_act("connect")
         if not allowed:
             self._logger.log("profile", "connect_skipped", "rate_limited", reason)
@@ -187,6 +195,9 @@ class ProfilePage:
 
     def _handle_connect_dialog(self) -> None:
         """Handle the 'Connect' vs 'Follow' vs 'Add to network' dialog."""
+        if not is_action_allowed(self._cfg, "connect"):
+            block_action(self._logger, "profile", "connect_confirm")
+            return
         # Check for "Connect" button in dialog
         connect_confirm = self._driver(text="Connect")
         if connect_confirm.exists:

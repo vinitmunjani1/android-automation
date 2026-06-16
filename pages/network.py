@@ -6,6 +6,7 @@ import time
 
 from human_touch import HumanTouch
 from detection_shields import DetectionShield
+from safety import assert_no_risk_screen, block_action, is_action_allowed, is_read_only_live_test
 
 
 class NetworkPage:
@@ -26,6 +27,8 @@ class NetworkPage:
         Returns: {scrolled, profiles_viewed, pending_checked}
         """
         stats = {"scrolled": 0, "profiles_viewed": 0, "pending_checked": False}
+        if self._cfg.get("safety", {}).get("stop_on_risk_screen", True):
+            assert_no_risk_screen(self._driver, self._logger, context="network")
 
         scroll_cfg = self._cfg.get("scroll", {})
         dwell_cfg = self._cfg.get("dwell", {})
@@ -35,7 +38,7 @@ class NetworkPage:
         self._touch.nav_to_tab("networking", log_label="net_nav")
 
         # Check pending invitations first (occasionally)
-        if random.random() < 0.30:
+        if not is_read_only_live_test(self._cfg) and random.random() < 0.30:
             self._check_pending_invitations(stats)
 
         # Scan network suggestions
@@ -55,7 +58,7 @@ class NetworkPage:
             time.sleep(dwell)
 
             # Maybe open a profile
-            if random.random() < actions_cfg.get("profile_open_from_network_probability", 0.25):
+            if not is_read_only_live_test(self._cfg) and random.random() < actions_cfg.get("profile_open_from_network_probability", 0.25):
                 self._open_suggested_profile(stats)
 
         self._logger.log("network", "browse", "ok",
@@ -64,6 +67,9 @@ class NetworkPage:
 
     def _check_pending_invitations(self, stats: dict) -> None:
         """Check pending connection requests (incoming + sent)."""
+        if not is_action_allowed(self._cfg, "pending_accept"):
+            block_action(self._logger, "network", "pending_check")
+            return
         # Look for pending indicator
         pending_badge = self._driver(resourceId="com.linkedin.android:id/tab_notifications")
         pending_text = self._driver(text="Pending")
@@ -91,6 +97,9 @@ class NetworkPage:
 
     def _maybe_accept_pending(self) -> None:
         """Accept a pending connection request."""
+        if not is_action_allowed(self._cfg, "pending_accept"):
+            block_action(self._logger, "network", "pending_accept")
+            return
         confirm_btn = self._driver(text="Confirm")
         if not confirm_btn.exists:
             confirm_btn = self._driver(text="Accept")
@@ -124,6 +133,9 @@ class NetworkPage:
 
     def _open_suggested_profile(self, stats: dict) -> None:
         """Open a suggested profile from network suggestions."""
+        if not is_action_allowed(self._cfg, "profile_open"):
+            block_action(self._logger, "network", "profile_open")
+            return
         # Tap on a suggested profile card (name/avatar area)
         cx = random.randint(30, 150)
         cy = random.randint(

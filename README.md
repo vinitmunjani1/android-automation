@@ -1,6 +1,6 @@
-# LinkedIn Human-Like Automation
+# LinkedIn Android Automation
 
-> Automates the LinkedIn Android app with human-mimicking behavior designed to evade LinkedIn's detection algorithms.
+> Controls the LinkedIn Android app through ADB/uiautomator2. This carries account risk. The safest supported live path is read-only `--safe-live-test`; this project does not hide emulator, ADB, uiautomator, USB debugging, Play Integrity, or LinkedIn telemetry signals.
 
 ## Architecture
 
@@ -22,21 +22,18 @@ linkedin-human-automation/
 └── logs/                      # Session logs (JSONL + summaries)
 ```
 
-## Key Anti-Detection Features
+## Account-Risk Safety Features
 
-| Signal | Evasion |
-|--------|---------|
-| Uniform timing | Gaussian jitter on every delay; 15% daily behavioral variation |
-| Perfect touches | Micro-drift (1-4px), dwell (30-90ms), Bezier swipe curves |
-| Predictable sequences | Markov-chain transitions; no two sessions follow same path |
-| Session length | 3-5 burst sessions/day, 8-22 min each, 2-15 min gaps |
-| Scroll patterns | Burst scrolling, mid-scroll reversal, scroll-back-up re-reading |
-| Accidental touches | 4% mis-tap rate with correction behavior |
-| Rate limits | Per-minute caps on likes (2), connects (1), total actions (8) |
-| Content awareness | Different dwell times for text/image/video/carousel posts |
-| Thumb-zone modeling | Different touch patterns for thumb-reachable vs two-hand zones |
-| Back navigation | 45% edge-swipe gesture, 55% back button (mixed randomly) |
-| Accessibility check | Detects enabled accessibility services (common bot vector) |
+| Risk | Safety behavior |
+|------|-----------------|
+| First live run | `--safe-live-test` is read-only |
+| Accidental engagement | likes/comments/saves/connects/messages are config-gated |
+| Old full-auto defaults | account-changing actions default to blocked in `safety` config |
+| Checkpoint / verification | run stops on suspicious-login, checkpoint, captcha, sign-in, or restriction text |
+| Dry-run surprise | `--dry-run` no longer connects to ADB/uiautomator |
+| Auditability | actions and blocked actions are logged |
+
+This does **not** bypass platform detection. It only reduces account-changing behavior risk.
 
 ## Quick Start
 
@@ -49,10 +46,13 @@ pip install uiautomator2
 # Connect Android device via USB + enable ADB
 adb devices
 
-# Preview today's schedule
+# Preview today's schedule without connecting to the phone
 python main.py --dry-run
 
-# Run a single session now (10-20 min)
+# First real-device test: read-only, no likes/connects/comments/messages
+python main.py --safe-live-test
+
+# Run a single session now (account-changing actions remain safety-gated by config)
 python main.py --once
 
 # Run all planned sessions for today
@@ -72,7 +72,8 @@ All behavior is tuned via `config.json`. Key sections:
 - **`dwell`**: Reading time ranges per content type (text/image/video/carousel/article)
 - **`scroll`**: Swipe counts, burst probability, reverse probability
 - **`scoring`**: Profile scoring factors for connect decision (mutual connections, industry, role)
-- **`anti_detection`**: Rate limits, stuck page detection, behavioral variation
+- **`safety`**: Read-only live test, action gates, checkpoint/risk-screen stop rules
+- **`anti_detection`**: Legacy timing/rate-limit/stuck-page settings; not a detection bypass
 - **`recovery`**: Session expiry, network errors, crash recovery
 - **`profile_defaults`**: Your profile data for scoring comparison
 
@@ -85,15 +86,11 @@ All behavior is tuned via `config.json`. Key sections:
 5. LinkedIn app installed and logged in
 6. Accessibility services **disabled** (LinkedIn checks for third-party services)
 
-## Detection Vectors Addressed
+## Detection / Platform Signals
 
-1. **Timing regularity** → Gaussian jitter + daily variation
-2. **Touch patterns** → Drift, dwell, Bezier curves, accidental touches
-3. **Action predictability** → Markov-chain transitions
-4. **Session duration** → Burst model with random gaps
-5. **Scroll velocity** → Variable speed with burst/reverse
-6. **Navigation** → Mixed back-gesture + bottom-nav
-7. **Activity hours** → Configurable window, bell-curve preference
+This project does not hide or bypass emulator, ADB, uiautomator, USB debugging, Play Integrity/SafetyNet, device reputation, network reputation, or LinkedIn telemetry signals.
+
+Use a physical phone and start with `--safe-live-test`. Keep account-changing actions manual-approved or disabled unless you explicitly accept the risk.
 8. **Interaction ratios** → Configurable probabilities with rate limits
 9. **Content awareness** → Different behavior per content type
 10. **Device fingerprint** → Accessibility service check, ADB toggle option
