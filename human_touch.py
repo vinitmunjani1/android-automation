@@ -342,13 +342,21 @@ class HumanTouch:
 
     def nav_to_tab(self, tab_key: str, *, log_label: str = "") -> None:
         """Navigate to a bottom-nav tab with thumb-zone offset."""
-        tabs = self._cfg.get("navigation_tabs", {})
+        tabs = self._cfg.get("navigation_tabs") or {
+            "home": {"nav_index": 0, "label": "Home"},
+            "messaging": {"nav_index": 1, "label": "Messaging"},
+            "networking": {"nav_index": 2, "label": "My Network"},
+            "jobs": {"nav_index": 3, "label": "Jobs"},
+            "notifications": {"nav_index": 4, "label": "Notifications"},
+        }
         tab = tabs.get(tab_key, {})
-        tab_id = tab.get("tab_id", "")
+        if not tab:
+            self._logger.log("nav_tab", tab_key, "blocked", "unknown_tab")
+            return
 
         # Calculate approximate position on bottom nav
         nav_h = self.bottom_nav_h
-        num_tabs = len(tabs)
+        num_tabs = max(1, len(tabs))
         tab_index = tab.get("nav_index", 0)
         tab_width = self.width / num_tabs
         tap_x = int((tab_index + 0.5) * tab_width)
