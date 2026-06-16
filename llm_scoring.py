@@ -28,6 +28,19 @@ def llm_scoring_enabled(config: dict) -> bool:
     return bool(llm_cfg.get("enabled", False))
 
 
+def llm_scoring_diagnostics(config: dict) -> dict:
+    llm_cfg = config.get("llm_scoring", {})
+    env_name = llm_cfg.get("api_key_env", "OPENROUTER_API_KEY")
+    return {
+        "enabled": bool(llm_cfg.get("enabled", False)),
+        "provider": llm_cfg.get("provider", "openrouter"),
+        "model": llm_cfg.get("model", DEFAULT_MODEL),
+        "api_key_env": env_name,
+        "api_key_present": bool(os.environ.get(env_name, "").strip()),
+        "max_candidates": int(llm_cfg.get("max_candidates", 15)),
+    }
+
+
 def _openrouter_key(config: dict) -> str:
     env_name = config.get("llm_scoring", {}).get("api_key_env", "OPENROUTER_API_KEY")
     return os.environ.get(env_name, "").strip()
@@ -147,3 +160,20 @@ def score_candidates_with_openrouter(candidates: list[dict], config: dict, query
         enriched.append(item)
 
     return sorted(enriched, key=lambda item: (item.get("llm_score") is not None, item.get("llm_score") or 0, item.get("score", 0)), reverse=True)
+
+
+def test_openrouter_scoring(config: dict) -> dict:
+    """Small no-LinkedIn diagnostic call for OpenRouter setup."""
+    test_candidates = [{
+        "name": "Test Founder",
+        "score": 50,
+        "mentions": 1,
+        "matched_positive_keywords": ["founder", "ai"],
+        "matched_negative_keywords": [],
+        "evidence": "Founder and CEO building AI workflow automation for B2B teams.",
+    }]
+    scored = score_candidates_with_openrouter(test_candidates, config, query="AI workflow founder")
+    return {
+        "diagnostics": llm_scoring_diagnostics(config),
+        "result": scored[0] if scored else None,
+    }

@@ -6,7 +6,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from llm_scoring import llm_scoring_enabled, score_candidates_with_openrouter
+from llm_scoring import llm_scoring_diagnostics, llm_scoring_enabled, score_candidates_with_openrouter
 
 NOISE_WORDS = {
     "Home", "My Network", "Post", "Notifications", "Jobs", "Search", "Comment",
@@ -180,9 +180,10 @@ def summarize_snapshots(snapshot_path: str | Path, scoring_profile: dict | None 
             unique_snippets.append(snippet)
 
     ranked_candidates = _score_candidates(name_counts, records, scoring_profile)[:25]
-    llm_status = {"enabled": False, "used": False, "error": ""}
+    llm_status = {"enabled": False, "used": False, "error": "", "diagnostics": {}}
     if config and llm_scoring_enabled(config) and ranked_candidates:
         llm_status["enabled"] = True
+        llm_status["diagnostics"] = llm_scoring_diagnostics(config)
         try:
             ranked_candidates = score_candidates_with_openrouter(ranked_candidates, config, query=query)
             llm_status["used"] = True
@@ -190,6 +191,7 @@ def summarize_snapshots(snapshot_path: str | Path, scoring_profile: dict | None 
             llm_status["error"] = str(exc)[:800]
     elif config and llm_scoring_enabled(config):
         llm_status["enabled"] = True
+        llm_status["diagnostics"] = llm_scoring_diagnostics(config)
         llm_status["error"] = "No candidates extracted; LLM scoring skipped"
 
     return {

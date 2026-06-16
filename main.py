@@ -28,6 +28,7 @@ from action_engine import ActionEngine, ActionPlan
 from safety import allow_full_automation, apply_safe_live_overrides, assert_no_risk_screen, is_read_only_live_test
 from read_only_summary import write_summary
 from safe_search import run_safe_search
+from llm_scoring import test_openrouter_scoring
 
 
 def main():
@@ -36,6 +37,7 @@ def main():
     parser.add_argument("--once", action="store_true", help="Run a single session now")
     parser.add_argument("--safe-live-test", action="store_true", help="Run one short read-only LinkedIn live test (no likes/connects/messages)")
     parser.add_argument("--safe-search", default="", help="Run read-only LinkedIn search scan for this query")
+    parser.add_argument("--test-llm-scoring", action="store_true", help="Test OpenRouter LLM scoring setup without opening LinkedIn")
     parser.add_argument("--device", default=None, help="ADB device serial")
     parser.add_argument("--config", default="config.json", help="Config file path")
     args = parser.parse_args()
@@ -52,6 +54,15 @@ def main():
     # Override device serial if provided
     if args.device:
         config["device"]["serial"] = args.device
+
+    if args.test_llm_scoring:
+        try:
+            result = test_openrouter_scoring(config)
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return
+        except Exception as exc:
+            print(f"LLM scoring test failed: {exc}")
+            sys.exit(1)
 
     if args.safe_live_test or args.safe_search:
         args.once = True
