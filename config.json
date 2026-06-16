@@ -71,13 +71,13 @@
       "max": 600
     },
     "swipe_duration_ms": {
-      "min": 200,
-      "max": 600
+      "min": 650,
+      "max": 1200
     },
     "swipe_curve": "bezier",
     "scroll_micro_swipe_ms": {
-      "min": 250,
-      "max": 480
+      "min": 650,
+      "max": 1200
     },
     "scroll_back_up_probability": 0.12,
     "back_gesture_probability": 0.45,
@@ -85,7 +85,11 @@
       "min": -8,
       "max": 8
     },
-    "edge_swipe_from_x_max": 80
+    "edge_swipe_from_x_max": 80,
+    "back_button_wait_seconds": {
+      "min": 0.6,
+      "max": 1.4
+    }
   },
   "dwell": {
     "feed_post_text_only_seconds": {
@@ -136,8 +140,8 @@
   "scroll": {
     "feed_min_swipes": 5,
     "feed_max_swipes": 12,
-    "burst_scroll_probability": 0.3,
-    "mid_scroll_reverse_probability": 0.15,
+    "burst_scroll_probability": 0.0,
+    "mid_scroll_reverse_probability": 0.08,
     "burst_segment_ms": {
       "min": 40,
       "max": 180
@@ -268,47 +272,49 @@
     "result_scrolls": 8,
     "snapshot_every_scrolls": 2,
     "typing": {
-      "_comment": "Visible typing pace for read-only safe search; reliability/readability only.",
-      "char_delay_min_seconds": 0.08,
-      "char_delay_max_seconds": 0.18
+      "_comment": "Visible typing pace for read-only safe search; reliability/readability only. Deliberate typo simulation is intentionally not supported.",
+      "char_delay_min_seconds": 0.18,
+      "char_delay_max_seconds": 0.45,
+      "word_pause_min_seconds": 0.35,
+      "word_pause_max_seconds": 0.95
     },
     "waits": {
       "_comment": "Randomized UI pacing waits for reliability/readability; not detection bypass.",
       "after_selector_tap_seconds": {
-        "min": 0.6,
-        "max": 1.2
+        "min": 0.8,
+        "max": 1.6
       },
       "after_open_search_seconds": {
-        "min": 0.8,
-        "max": 1.4
-      },
-      "after_focus_input_seconds": {
-        "min": 0.25,
-        "max": 0.7
-      },
-      "before_submit_seconds": {
-        "min": 0.4,
-        "max": 0.9
-      },
-      "after_submit_seconds": {
-        "min": 2.0,
-        "max": 3.8
-      },
-      "after_people_filter_seconds": {
-        "min": 1.2,
-        "max": 2.4
-      },
-      "after_result_scroll_seconds": {
-        "min": 0.8,
+        "min": 1.0,
         "max": 1.8
       },
+      "after_focus_input_seconds": {
+        "min": 0.5,
+        "max": 1.1
+      },
+      "before_submit_seconds": {
+        "min": 0.8,
+        "max": 1.6
+      },
+      "after_submit_seconds": {
+        "min": 2.8,
+        "max": 5.0
+      },
+      "after_people_filter_seconds": {
+        "min": 1.8,
+        "max": 3.4
+      },
+      "after_result_scroll_seconds": {
+        "min": 1.4,
+        "max": 3.0
+      },
       "after_profile_open_seconds": {
-        "min": 2.0,
-        "max": 3.5
+        "min": 3.0,
+        "max": 5.5
       },
       "after_profile_back_seconds": {
-        "min": 1.0,
-        "max": 2.0
+        "min": 1.6,
+        "max": 3.0
       }
     },
     "profile_open_coordinate_fallback": true

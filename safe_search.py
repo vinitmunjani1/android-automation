@@ -58,6 +58,8 @@ def _type_query_slowly(touch, logger, query: str, config: dict) -> int:
     typing_cfg = config.get("safe_search", {}).get("typing", {})
     min_delay = float(typing_cfg.get("char_delay_min_seconds", 0.08))
     max_delay = float(typing_cfg.get("char_delay_max_seconds", 0.18))
+    word_pause_min = float(typing_cfg.get("word_pause_min_seconds", 0.25))
+    word_pause_max = float(typing_cfg.get("word_pause_max_seconds", 0.85))
     typed = 0
     for char in query:
         escaped = _adb_input_char(char)
@@ -65,8 +67,11 @@ def _type_query_slowly(touch, logger, query: str, config: dict) -> int:
             continue
         touch._shell(f"input text {escaped}")
         typed += 1
-        time.sleep(random.uniform(min_delay, max_delay))
-    logger.log("safe_search", "type_query_slowly", "ok", f"chars={typed}")
+        if char == " ":
+            time.sleep(random.uniform(word_pause_min, word_pause_max))
+        else:
+            time.sleep(random.uniform(min_delay, max_delay))
+    logger.log("safe_search", "type_query_slowly", "ok", f"chars={typed},word_pauses=true")
     return typed
 
 

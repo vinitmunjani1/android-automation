@@ -107,3 +107,7 @@ python main.py --safe-search "ai engineer" --safe-open-profiles 3
 This may create LinkedIn profile-view signals/notifications. It still does not connect, follow, message, like, comment, save, or accept requests.
 
 Profile opening tries visible-name selectors first, then LinkedIn result resource IDs, then an explicit coordinate fallback if `safe_search.profile_open_coordinate_fallback=true`. Keep `--safe-open-profiles` small because profile opens may create profile-view signals.
+
+## Safe pacing notes
+
+Safe modes use slower randomized UI pacing for reliability/readability: slower typing, pauses after spaces, slower swipes, and slower back-navigation waits. Deliberate fake typos/corrections are intentionally not implemented.

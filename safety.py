@@ -177,4 +177,13 @@ def apply_safe_live_overrides(config: dict) -> None:
     scroll.update({
         "feed_min_swipes": 10,
         "feed_max_swipes": 20,
+        "burst_scroll_probability": 0.0,
+        "mid_scroll_reverse_probability": 0.08,
+    })
+
+    touch = config.setdefault("touch", {})
+    touch.update({
+        "scroll_micro_swipe_ms": {"min": 650, "max": 1200},
+        "swipe_duration_ms": {"min": 650, "max": 1200},
+        "back_button_wait_seconds": {"min": 0.6, "max": 1.4},
     })

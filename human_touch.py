@@ -323,7 +323,8 @@ class HumanTouch:
             method = "gesture"
         else:
             self._shell("input keyevent 4")  # KEYCODE_BACK
-            time.sleep(random.uniform(0.1, 0.3))
+            back_wait = self._touch_cfg.get("back_button_wait_seconds", {"min": 0.45, "max": 1.1})
+            time.sleep(random.uniform(float(back_wait.get("min", 0.45)), float(back_wait.get("max", 1.1))))
             method = "button"
 
         if log_label:
