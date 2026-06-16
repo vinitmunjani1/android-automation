@@ -85,3 +85,13 @@ Then set in `config.json`:
 ```
 
 Only compact candidate evidence snippets from the read-only snapshot summary are sent to OpenRouter. No actions are taken from LLM output; recommendations remain manual-review only.
+
+Alternative local `.env` setup for OpenRouter:
+
+```powershell
+copy .env.example .env
+# edit .env and set OPENROUTER_API_KEY=...
+python main.py --test-llm-scoring
+```
+
+Do not put the actual API key in `config.json`; `api_key_env` is the environment variable name, not the key value.

@@ -29,6 +29,7 @@ from safety import allow_full_automation, apply_safe_live_overrides, assert_no_r
 from read_only_summary import write_summary
 from safe_search import run_safe_search
 from llm_scoring import test_openrouter_scoring
+from env_loader import load_dotenv
 
 
 def main():
@@ -50,6 +51,8 @@ def main():
 
     with open(config_path) as f:
         config = json.load(f)
+
+    load_dotenv(config_path.parent / ".env")
 
     # Override device serial if provided
     if args.device:
