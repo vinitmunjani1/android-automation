@@ -115,14 +115,11 @@ class HumanTouch:
         drift_x, drift_y = self._clamp(drift_x, drift_y)
         dwell_ms = int(self._r(*self._cfg_range("tap_dwell_ms")))
 
-        # Build touchscreen sequence: down → move(drift) → up
-        # Format: input touchscreen down x y [ms] → move x y → up
-        self._shell(
-            f"input touchscreen down {x} {y} && "
-            f"sleep 0.{dwell_ms:03d} && "
-            f"input touchscreen move {drift_x} {drift_y} && "
-            f"input touchscreen up"
-        )
+        # Use standard Android input tap. Some devices ignore the lower-level
+        # `input touchscreen down/move/up` sequence even though the shell
+        # command returns successfully, which made logs show taps/scrolls while
+        # the screen did not move.
+        self._shell(f"input tap {drift_x} {drift_y}")
 
         time.sleep(dwell_ms / 1000.0 + 0.02)  # Small buffer
 
@@ -208,16 +205,9 @@ class HumanTouch:
             seg_ms = int(duration_ms * ease_t / (num_points)) if i < num_points else 0
             points.append((int(bx), int(by), seg_ms))
 
-        # Build ADB command sequence
-        parts = [f"input touchscreen down {x1} {y1}"]
-        for px, py, ms in points[1:]:
-            if ms > 0:
-                parts.append(f"sleep 0.{ms:03d}")
-            parts.append(f"input touchscreen move {px} {py}")
-        parts.append("input touchscreen up")
-
-        cmd = " && ".join(parts)
-        self._shell(cmd)
+        # Use standard Android input swipe. It is less fancy than the generated
+        # multi-point path, but much more reliable across OEM Android builds.
+        self._shell(f"input swipe {x1} {y1} {x2} {y2} {duration_ms}")
         time.sleep(duration_ms / 1000.0 + 0.02)
 
         if log_label:
@@ -252,12 +242,12 @@ class HumanTouch:
             # Random start position within scroll region
             sx = random.randint(rx1, rx2)
             sy_start = random.randint(ry1, ry2)
-            sy_end = sy_start - random.randint(120, 280)
+            sy_end = sy_start - random.randint(350, 650)
 
             # Burst mode: faster, shorter swipes
             if random.random() < scroll_cfg.get("burst_scroll_probability", 0.30):
                 dur = int(self._r(*self._cfg_range("burst_segment_ms")))
-                sy_end = sy_start - random.randint(60, 150)
+                sy_end = sy_start - random.randint(250, 450)
             else:
                 dur = int(self._r(*self._cfg_range("scroll_micro_swipe_ms")))
 
@@ -292,7 +282,7 @@ class HumanTouch:
         for i in range(count):
             sx = random.randint(rx1, rx2)
             sy_start = random.randint(ry1, ry2)
-            sy_end = sy_start + random.randint(120, 280)
+            sy_end = sy_start + random.randint(350, 650)
             dur = int(self._r(*self._cfg_range("scroll_micro_swipe_ms")))
             self.swipe(sx, sy_start, sx, sy_end, duration_ms=dur,
                        log_label=f"{log_label}_up_{i}")
